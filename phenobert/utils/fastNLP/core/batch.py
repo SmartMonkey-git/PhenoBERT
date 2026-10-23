@@ -99,7 +99,7 @@ class DataSetGetter:
 
 class SamplerAdapter(torch.utils.data.Sampler):
     def __init__(self, sampler, dataset):
-        super().__init__(dataset)
+        super().__init__()
         self.sampler = sampler
         self.dataset = dataset
 
