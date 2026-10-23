@@ -1,8 +1,6 @@
 """undocumented"""
 
-__all__ = [
-    "TransformerEncoder"
-]
+__all__ = ["TransformerEncoder"]
 from torch import nn
 
 from .attention import MultiHeadAttention
@@ -15,14 +13,20 @@ class TransformerEncoder(nn.Module):
     """
 
     class SubLayer(nn.Module):
-        def __init__(self, model_size, inner_size, key_size, value_size, num_head, dropout=0.1):
+        def __init__(
+            self, model_size, inner_size, key_size, value_size, num_head, dropout=0.1
+        ):
             super(TransformerEncoder.SubLayer, self).__init__()
-            self.atte = MultiHeadAttention(model_size, key_size, value_size, num_head, dropout)
+            self.atte = MultiHeadAttention(
+                model_size, key_size, value_size, num_head, dropout
+            )
             self.norm1 = nn.LayerNorm(model_size, eps=1e-6)
-            self.ffn = nn.Sequential(nn.Linear(model_size, inner_size),
-                                     nn.ReLU(),
-                                     nn.Dropout(dropout),
-                                     nn.Linear(inner_size, model_size))
+            self.ffn = nn.Sequential(
+                nn.Linear(model_size, inner_size),
+                nn.ReLU(),
+                nn.Dropout(dropout),
+                nn.Linear(inner_size, model_size),
+            )
             self.norm2 = nn.LayerNorm(model_size, eps=1e-6)
             self.dropout = nn.Dropout(dropout)
 
@@ -47,7 +51,7 @@ class TransformerEncoder(nn.Module):
 
     def __init__(self, num_layers, **kargs):
         """
-        
+
         :param int num_layers: transformer的层数
         :param int model_size: 输入维度的大小。同时也是输出维度的大小。
         :param int inner_size: FFN层的hidden大小
@@ -58,7 +62,7 @@ class TransformerEncoder(nn.Module):
         """
         super(TransformerEncoder, self).__init__()
         self.layers = nn.ModuleList([self.SubLayer(**kargs) for _ in range(num_layers)])
-        self.norm = nn.LayerNorm(kargs['model_size'], eps=1e-6)
+        self.norm = nn.LayerNorm(kargs["model_size"], eps=1e-6)
 
     def forward(self, x, seq_mask=None):
         """

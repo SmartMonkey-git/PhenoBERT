@@ -2,18 +2,16 @@ r"""
 fastNLP包当中的field命名均符合一定的规范，该规范由fastNLP.Const类进行定义。
 """
 
-__all__ = [
-    "Const"
-]
+__all__ = ["Const"]
 
 
 class Const:
     """
     fastNLP中field命名常量。
-    
+
     .. todo::
         把下面这段改成表格
-        
+
     具体列表::
 
         INPUT       模型的序列输入      words（具有多列words时，依次使用words1, words2, ）
@@ -26,57 +24,58 @@ class Const:
         RAW_CHAR    原文的字           raw_chars  (具有多列raw_chars时，依次使用raw_chars1, raw_chars2)
 
     """
-    INPUT = 'words'
-    CHAR_INPUT = 'chars'
-    INPUT_LEN = 'seq_len'
-    OUTPUT = 'pred'
-    TARGET = 'target'
-    LOSS = 'loss'
-    RAW_WORD = 'raw_words'
-    RAW_CHAR = 'raw_chars'
-    
+
+    INPUT = "words"
+    CHAR_INPUT = "chars"
+    INPUT_LEN = "seq_len"
+    OUTPUT = "pred"
+    TARGET = "target"
+    LOSS = "loss"
+    RAW_WORD = "raw_words"
+    RAW_CHAR = "raw_chars"
+
     @staticmethod
     def INPUTS(i):
         """得到第 i 个 ``INPUT`` 的命名"""
         i = int(i) + 1
         return Const.INPUT + str(i)
-    
+
     @staticmethod
     def CHAR_INPUTS(i):
         """得到第 i 个 ``CHAR_INPUT`` 的命名"""
         i = int(i) + 1
         return Const.CHAR_INPUT + str(i)
-    
+
     @staticmethod
     def RAW_WORDS(i):
         """得到第 i 个 ``RAW_WORDS`` 的命名"""
         i = int(i) + 1
         return Const.RAW_WORD + str(i)
-    
+
     @staticmethod
     def RAW_CHARS(i):
         """得到第 i 个 ``RAW_CHARS`` 的命名"""
         i = int(i) + 1
         return Const.RAW_CHAR + str(i)
-    
+
     @staticmethod
     def INPUT_LENS(i):
         """得到第 i 个 ``INPUT_LEN`` 的命名"""
         i = int(i) + 1
         return Const.INPUT_LEN + str(i)
-    
+
     @staticmethod
     def OUTPUTS(i):
         """得到第 i 个 ``OUTPUT`` 的命名"""
         i = int(i) + 1
         return Const.OUTPUT + str(i)
-    
+
     @staticmethod
     def TARGETS(i):
         """得到第 i 个 ``TARGET`` 的命名"""
         i = int(i) + 1
         return Const.TARGET + str(i)
-    
+
     @staticmethod
     def LOSSES(i):
         """得到第 i 个 ``LOSS`` 的命名"""

@@ -28,7 +28,7 @@ __all__ = [
     "BertForSentenceMatching",
     "BertForMultipleChoice",
     "BertForTokenClassification",
-    "BertForQuestionAnswering"
+    "BertForQuestionAnswering",
 ]
 
 import warnings
@@ -47,9 +47,10 @@ class BertForSequenceClassification(BaseModel):
     BERT model for classification.
 
     """
-    def __init__(self, embed: BertEmbedding, num_labels: int=2, dropout=0.1):
+
+    def __init__(self, embed: BertEmbedding, num_labels: int = 2, dropout=0.1):
         """
-        
+
         :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).
         :param int num_labels: 文本分类类别数目，默认值为2.
         :param float dropout: dropout的大小，默认值为0.1.
@@ -63,8 +64,10 @@ class BertForSequenceClassification(BaseModel):
 
         if not self.bert.model.include_cls_sep:
             self.bert.model.include_cls_sep = True
-            warn_msg = "Bert for sequence classification excepts BertEmbedding `include_cls_sep` True, " \
-                       "but got False. FastNLP has changed it to True."
+            warn_msg = (
+                "Bert for sequence classification excepts BertEmbedding `include_cls_sep` True, "
+                "but got False. FastNLP has changed it to True."
+            )
             logger.warning(warn_msg)
             warnings.warn(warn_msg)
 
@@ -93,9 +96,10 @@ class BertForSentenceMatching(BaseModel):
     BERT model for sentence matching.
 
     """
-    def __init__(self, embed: BertEmbedding, num_labels: int=2, dropout=0.1):
+
+    def __init__(self, embed: BertEmbedding, num_labels: int = 2, dropout=0.1):
         """
-        
+
         :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).
         :param int num_labels: Matching任务类别数目，默认值为2.
         :param float dropout: dropout的大小，默认值为0.1.
@@ -108,8 +112,10 @@ class BertForSentenceMatching(BaseModel):
 
         if not self.bert.model.include_cls_sep:
             self.bert.model.include_cls_sep = True
-            warn_msg = "Bert for sentence matching excepts BertEmbedding `include_cls_sep` True, " \
-                       "but got False. FastNLP has changed it to True."
+            warn_msg = (
+                "Bert for sentence matching excepts BertEmbedding `include_cls_sep` True, "
+                "but got False. FastNLP has changed it to True."
+            )
             logger.warning(warn_msg)
             warnings.warn(warn_msg)
 
@@ -138,9 +144,10 @@ class BertForMultipleChoice(BaseModel):
     BERT model for multiple choice.
 
     """
+
     def __init__(self, embed: BertEmbedding, num_choices=2, dropout=0.1):
         """
-        
+
         :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).
         :param int num_choices: 多选任务选项数目，默认值为2.
         :param float dropout: dropout的大小，默认值为0.1.
@@ -154,8 +161,10 @@ class BertForMultipleChoice(BaseModel):
 
         if not self.bert.model.include_cls_sep:
             self.bert.model.include_cls_sep = True
-            warn_msg = "Bert for multiple choice excepts BertEmbedding `include_cls_sep` True, " \
-                       "but got False. FastNLP has changed it to True."
+            warn_msg = (
+                "Bert for multiple choice excepts BertEmbedding `include_cls_sep` True, "
+                "but got False. FastNLP has changed it to True."
+            )
             logger.warning(warn_msg)
             warnings.warn(warn_msg)
 
@@ -188,9 +197,10 @@ class BertForTokenClassification(BaseModel):
     BERT model for token classification.
 
     """
+
     def __init__(self, embed: BertEmbedding, num_labels, dropout=0.1):
         """
-        
+
         :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).
         :param int num_labels: 序列标注标签数目，无默认值.
         :param float dropout: dropout的大小，默认值为0.1.
@@ -204,8 +214,10 @@ class BertForTokenClassification(BaseModel):
 
         if self.bert.model.include_cls_sep:
             self.bert.model.include_cls_sep = False
-            warn_msg = "Bert for token classification excepts BertEmbedding `include_cls_sep` False, " \
-                       "but got True. FastNLP has changed it to False."
+            warn_msg = (
+                "Bert for token classification excepts BertEmbedding `include_cls_sep` False, "
+                "but got True. FastNLP has changed it to False."
+            )
             logger.warning(warn_msg)
             warnings.warn(warn_msg)
 
@@ -234,9 +246,10 @@ class BertForQuestionAnswering(BaseModel):
     用于做Q&A的Bert模型，如果是Squad2.0请将BertEmbedding的include_cls_sep设置为True，Squad1.0或CMRC则设置为False
 
     """
+
     def __init__(self, embed: BertEmbedding):
         """
-        
+
         :param fastNLP.embeddings.BertEmbedding embed: 下游模型的编码器(encoder).
         :param int num_labels: 抽取式QA列数，默认值为2(即第一列为start_span, 第二列为end_span).
         """
@@ -253,7 +266,7 @@ class BertForQuestionAnswering(BaseModel):
         sequence_output = self.bert(words)
         logits = self.qa_outputs(sequence_output)  # [batch_size, seq_len, num_labels]
 
-        return {'pred_start': logits[:, :, 0], 'pred_end': logits[:, :, 1]}
+        return {"pred_start": logits[:, :, 0], "pred_end": logits[:, :, 1]}
 
     def predict(self, words):
         return self.forward(words)

@@ -1,8 +1,6 @@
 """undocumented"""
 
-__all__ = [
-    "JsonLoader"
-]
+__all__ = ["JsonLoader"]
 
 from .loader import Loader
 from ..file_reader import _read_json

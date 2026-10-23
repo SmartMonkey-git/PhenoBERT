@@ -1,8 +1,6 @@
 """undocumented"""
 
-__all__ = [
-    "ConvMaxpool"
-]
+__all__ = ["ConvMaxpool"]
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -18,7 +16,7 @@ class ConvMaxpool(nn.Module):
 
     def __init__(self, in_channels, out_channels, kernel_sizes, activation="relu"):
         """
-        
+
         :param int in_channels: 输入channel的大小，一般是embedding的维度; 或encoder的output维度
         :param int,tuple(int) out_channels: 输出channel的数量。如果为list，则需要与kernel_sizes的数量保持一致
         :param int,tuple(int) kernel_sizes: 输出channel的kernel大小。
@@ -34,38 +32,48 @@ class ConvMaxpool(nn.Module):
             if isinstance(kernel_sizes, int) and isinstance(out_channels, int):
                 out_channels = [out_channels]
                 kernel_sizes = [kernel_sizes]
-            elif isinstance(kernel_sizes, (tuple, list)) and isinstance(out_channels, (tuple, list)):
-                assert len(out_channels) == len(
-                    kernel_sizes), "The number of out_channels should be equal to the number" \
-                                   " of kernel_sizes."
+            elif isinstance(kernel_sizes, (tuple, list)) and isinstance(
+                out_channels, (tuple, list)
+            ):
+                assert len(out_channels) == len(kernel_sizes), (
+                    "The number of out_channels should be equal to the number"
+                    " of kernel_sizes."
+                )
             else:
-                raise ValueError("The type of out_channels and kernel_sizes should be the same.")
+                raise ValueError(
+                    "The type of out_channels and kernel_sizes should be the same."
+                )
 
-            self.convs = nn.ModuleList([nn.Conv1d(
-                in_channels=in_channels,
-                out_channels=oc,
-                kernel_size=ks,
-                stride=1,
-                padding=ks // 2,
-                dilation=1,
-                groups=1,
-                bias=None)
-                for oc, ks in zip(out_channels, kernel_sizes)])
+            self.convs = nn.ModuleList(
+                [
+                    nn.Conv1d(
+                        in_channels=in_channels,
+                        out_channels=oc,
+                        kernel_size=ks,
+                        stride=1,
+                        padding=ks // 2,
+                        dilation=1,
+                        groups=1,
+                        bias=None,
+                    )
+                    for oc, ks in zip(out_channels, kernel_sizes)
+                ]
+            )
 
         else:
-            raise Exception(
-                'Incorrect kernel sizes: should be list, tuple or int')
+            raise Exception("Incorrect kernel sizes: should be list, tuple or int")
 
         # activation function
-        if activation == 'relu':
+        if activation == "relu":
             self.activation = F.relu
-        elif activation == 'sigmoid':
+        elif activation == "sigmoid":
             self.activation = F.sigmoid
-        elif activation == 'tanh':
+        elif activation == "tanh":
             self.activation = F.tanh
         else:
             raise Exception(
-                "Undefined activation function: choose from: relu, tanh, sigmoid")
+                "Undefined activation function: choose from: relu, tanh, sigmoid"
+            )
 
     def forward(self, x, mask=None):
         """
@@ -80,8 +88,9 @@ class ConvMaxpool(nn.Module):
         xs = [self.activation(conv(x)) for conv in self.convs]  # [[N,C,L], ...]
         if mask is not None:
             mask = mask.unsqueeze(1)  # B x 1 x L
-            xs = [x.masked_fill_(mask.eq(0), float('-inf')) for x in xs]
+            xs = [x.masked_fill_(mask.eq(0), float("-inf")) for x in xs]
         # max-pooling
-        xs = [F.max_pool1d(input=i, kernel_size=i.size(2)).squeeze(2)
-              for i in xs]  # [[N, C], ...]
+        xs = [
+            F.max_pool1d(input=i, kernel_size=i.size(2)).squeeze(2) for i in xs
+        ]  # [[N, C], ...]
         return torch.cat(xs, dim=-1)  # [N, C]

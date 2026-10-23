@@ -1,12 +1,8 @@
 """
 sampler 子类实现了 fastNLP 所需的各种采样器。
 """
-__all__ = [
-    "Sampler",
-    "BucketSampler",
-    "SequentialSampler",
-    "RandomSampler"
-]
+
+__all__ = ["Sampler", "BucketSampler", "SequentialSampler", "RandomSampler"]
 
 from itertools import chain
 
@@ -19,7 +15,7 @@ class Sampler(object):
 
     子类必须实现 ``__call__`` 方法. 输入 `DataSet` 对象, 返回其中元素的下标序列
     """
-    
+
     def __call__(self, data_set):
         """
         :param DataSet data_set: `DataSet` 对象, 需要Sample的数据
@@ -33,7 +29,7 @@ class SequentialSampler(Sampler):
     顺序取出元素的 `Sampler`
 
     """
-    
+
     def __call__(self, data_set):
         return list(range(len(data_set)))
 
@@ -43,7 +39,7 @@ class RandomSampler(Sampler):
     随机化取元素的 `Sampler`
 
     """
-    
+
     def __call__(self, data_set):
         return list(np.random.permutation(len(data_set)))
 
@@ -52,10 +48,10 @@ class BucketSampler(Sampler):
     """
     带Bucket的 `Random Sampler`. 可以随机地取出长度相似的元素
     """
-    
-    def __init__(self, num_buckets=10, batch_size=None, seq_len_field_name='seq_len'):
+
+    def __init__(self, num_buckets=10, batch_size=None, seq_len_field_name="seq_len"):
         """
-        
+
         :param int num_buckets: bucket的数量
         :param int batch_size: batch的大小. 默认为None，Trainer在调用BucketSampler时，会将该值正确设置，如果是非Trainer场景使用，需
             要显示传递该值
@@ -78,20 +74,30 @@ class BucketSampler(Sampler):
             raise RuntimeError("batch_size is None.")
         seq_lens = data_set.get_all_fields()[self.seq_len_field_name].content
         total_sample_num = len(seq_lens)
-        
+
         bucket_indexes = []
-        assert total_sample_num >= self.num_buckets, "The number of samples is smaller than the number of buckets."
+        assert total_sample_num >= self.num_buckets, (
+            "The number of samples is smaller than the number of buckets."
+        )
         num_sample_per_bucket = total_sample_num // self.num_buckets
         for i in range(self.num_buckets):
-            bucket_indexes.append([num_sample_per_bucket * i, num_sample_per_bucket * (i + 1)])
+            bucket_indexes.append(
+                [num_sample_per_bucket * i, num_sample_per_bucket * (i + 1)]
+            )
         bucket_indexes[-1][1] = total_sample_num
-        
-        sorted_seq_lens = list(sorted([(idx, seq_len) for
-                                       idx, seq_len in zip(range(total_sample_num), seq_lens)],
-                                      key=lambda x: x[1]))
-        
+
+        sorted_seq_lens = list(
+            sorted(
+                [
+                    (idx, seq_len)
+                    for idx, seq_len in zip(range(total_sample_num), seq_lens)
+                ],
+                key=lambda x: x[1],
+            )
+        )
+
         batchs = []
-        
+
         left_init_indexes = []
         for b_idx in range(self.num_buckets):
             start_idx = bucket_indexes[b_idx][0]
@@ -101,12 +107,16 @@ class BucketSampler(Sampler):
             num_batch_per_bucket = len(left_init_indexes) // self.batch_size
             np.random.shuffle(left_init_indexes)
             for i in range(num_batch_per_bucket):
-                batchs.append(left_init_indexes[i * self.batch_size:(i + 1) * self.batch_size])
-            left_init_indexes = left_init_indexes[num_batch_per_bucket * self.batch_size:]
+                batchs.append(
+                    left_init_indexes[i * self.batch_size : (i + 1) * self.batch_size]
+                )
+            left_init_indexes = left_init_indexes[
+                num_batch_per_bucket * self.batch_size :
+            ]
         if (left_init_indexes) != 0:
             batchs.append(left_init_indexes)
         np.random.shuffle(batchs)
-        
+
         return list(chain(*batchs))
 
 
@@ -144,13 +154,15 @@ def k_means_1d(x, k, max_iter=100):
     if len(sorted_x) < k:
         raise ValueError("too few buckets")
     gap = len(sorted_x) / k
-    
+
     centroids = np.array([sorted_x[int(x * gap)] for x in range(k)])
     assign = None
-    
+
     for i in range(max_iter):
         # Cluster Assignment step
-        assign = np.array([np.argmin([np.absolute(x_i - x) for x in centroids]) for x_i in x])
+        assign = np.array(
+            [np.argmin([np.absolute(x_i - x) for x in centroids]) for x_i in x]
+        )
         # Move centroids step
         new_centroids = np.array([x[assign == k].mean() for k in range(k)])
         if (new_centroids == centroids).all():
@@ -179,7 +191,7 @@ def k_means_bucketing(lengths, buckets):
     bucket_data = [[] for _ in buckets]
     num_buckets = len(buckets)
     _, assignments = k_means_1d(lengths, num_buckets)
-    
+
     for idx, bucket_id in enumerate(assignments):
         if buckets[bucket_id] is None or lengths[idx] <= buckets[bucket_id]:
             bucket_data[bucket_id].append(idx)

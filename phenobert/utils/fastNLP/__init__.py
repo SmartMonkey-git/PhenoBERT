@@ -10,21 +10,18 @@ fastNLP 由 :mod:`~fastNLP.core` 、 :mod:`~fastNLP.io` 、:mod:`~fastNLP.embedd
 
 fastNLP 中最常用的组件可以直接从 fastNLP 包中 import ，他们的文档如下：
 """
+
 __all__ = [
     "Instance",
     "FieldArray",
-    
     "DataSetIter",
     "BatchIter",
     "TorchLoaderIter",
-    
     "Vocabulary",
     "DataSet",
     "Const",
-    
     "Trainer",
     "Tester",
-    
     "Callback",
     "GradientClipCallback",
     "EarlyStopCallback",
@@ -35,40 +32,33 @@ __all__ = [
     "LRFinder",
     "TensorboardCallback",
     "WarmupCallback",
-    'SaveModelCallback',
+    "SaveModelCallback",
     "CallbackException",
     "EarlyStopError",
-    
     "Padder",
     "AutoPadder",
     "EngChar2DPadder",
-    
     "AccuracyMetric",
     "SpanFPreRecMetric",
     "ExtractiveQAMetric",
-    
     "Optimizer",
     "SGD",
     "Adam",
     "AdamW",
-    
     "Sampler",
     "SequentialSampler",
     "BucketSampler",
     "RandomSampler",
-    
     "LossFunc",
     "CrossEntropyLoss",
     "L1Loss",
     "BCELoss",
     "NLLLoss",
     "LossInForward",
-    
     "cache_results",
-    
-    'logger'
+    "logger",
 ]
-__version__ = '0.4.5'
+__version__ = "0.4.5"
 
 import sys
 

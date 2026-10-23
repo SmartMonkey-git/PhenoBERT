@@ -55,14 +55,16 @@ class LstmCellWithProjection(torch.nn.Module):
         API for returning stacked LSTM states.
     """
 
-    def __init__(self,
-                 input_size: int,
-                 hidden_size: int,
-                 cell_size: int,
-                 go_forward: bool = True,
-                 recurrent_dropout_probability: float = 0.0,
-                 memory_cell_clip_value: Optional[float] = None,
-                 state_projection_clip_value: Optional[float] = None) -> None:
+    def __init__(
+        self,
+        input_size: int,
+        hidden_size: int,
+        cell_size: int,
+        go_forward: bool = True,
+        recurrent_dropout_probability: float = 0.0,
+        memory_cell_clip_value: Optional[float] = None,
+        state_projection_clip_value: Optional[float] = None,
+    ) -> None:
         super(LstmCellWithProjection, self).__init__()
         # Required to be wrapped with a :class:`PytorchSeq2SeqWrapper`.
         self.input_size = input_size
@@ -90,12 +92,14 @@ class LstmCellWithProjection(torch.nn.Module):
         self.state_linearity.bias.data.fill_(0.0)
         # Initialize forget gate biases to 1.0 as per An Empirical
         # Exploration of Recurrent Network Architectures, (Jozefowicz, 2015).
-        self.state_linearity.bias.data[self.cell_size:2 * self.cell_size].fill_(1.0)
+        self.state_linearity.bias.data[self.cell_size : 2 * self.cell_size].fill_(1.0)
 
-    def forward(self,  # pylint: disable=arguments-differ
-                inputs: torch.FloatTensor,
-                batch_lengths: List[int],
-                initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None):
+    def forward(
+        self,  # pylint: disable=arguments-differ
+        inputs: torch.FloatTensor,
+        batch_lengths: List[int],
+        initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+    ):
         """
         Parameters
         ----------
@@ -125,22 +129,25 @@ class LstmCellWithProjection(torch.nn.Module):
 
         # We have to use this '.data.new().fill_' pattern to create tensors with the correct
         # type - forward has no knowledge of whether these are torch.Tensors or torch.cuda.Tensors.
-        output_accumulator = inputs.data.new(batch_size,
-                                             total_timesteps,
-                                             self.hidden_size).fill_(0)
+        output_accumulator = inputs.data.new(
+            batch_size, total_timesteps, self.hidden_size
+        ).fill_(0)
         if initial_state is None:
-            full_batch_previous_memory = inputs.data.new(batch_size,
-                                                         self.cell_size).fill_(0)
-            full_batch_previous_state = inputs.data.new(batch_size,
-                                                        self.hidden_size).fill_(0)
+            full_batch_previous_memory = inputs.data.new(
+                batch_size, self.cell_size
+            ).fill_(0)
+            full_batch_previous_state = inputs.data.new(
+                batch_size, self.hidden_size
+            ).fill_(0)
         else:
             full_batch_previous_state = initial_state[0].squeeze(0)
             full_batch_previous_memory = initial_state[1].squeeze(0)
 
         current_length_index = batch_size - 1 if self.go_forward else 0
         if self.recurrent_dropout_probability > 0.0 and self.training:
-            dropout_mask = get_dropout_mask(self.recurrent_dropout_probability,
-                                            full_batch_previous_state)
+            dropout_mask = get_dropout_mask(
+                self.recurrent_dropout_probability, full_batch_previous_state
+            )
         else:
             dropout_mask = None
 
@@ -165,18 +172,24 @@ class LstmCellWithProjection(torch.nn.Module):
                 # First conditional: Are we already at the maximum number of elements in the batch?
                 # Second conditional: Does the next shortest sequence beyond the current batch
                 # index require computation use this timestep?
-                while current_length_index < (len(batch_lengths) - 1) and \
-                        batch_lengths[current_length_index + 1] > index:
+                while (
+                    current_length_index < (len(batch_lengths) - 1)
+                    and batch_lengths[current_length_index + 1] > index
+                ):
                     current_length_index += 1
 
             # Actually get the slices of the batch which we
             # need for the computation at this timestep.
             # shape (batch_size, cell_size)
-            previous_memory = full_batch_previous_memory[0: current_length_index + 1].clone()
+            previous_memory = full_batch_previous_memory[
+                0 : current_length_index + 1
+            ].clone()
             # Shape (batch_size, hidden_size)
-            previous_state = full_batch_previous_state[0: current_length_index + 1].clone()
+            previous_state = full_batch_previous_state[
+                0 : current_length_index + 1
+            ].clone()
             # Shape (batch_size, input_size)
-            timestep_input = inputs[0: current_length_index + 1, index]
+            timestep_input = inputs[0 : current_length_index + 1, index]
 
             # Do the projections for all the gates all at once.
             # Both have shape (batch_size, 4 * cell_size)
@@ -185,14 +198,22 @@ class LstmCellWithProjection(torch.nn.Module):
 
             # Main LSTM equations using relevant chunks of the big linear
             # projections of the hidden state and inputs.
-            input_gate = torch.sigmoid(projected_input[:, (0 * self.cell_size):(1 * self.cell_size)] +
-                                       projected_state[:, (0 * self.cell_size):(1 * self.cell_size)])
-            forget_gate = torch.sigmoid(projected_input[:, (1 * self.cell_size):(2 * self.cell_size)] +
-                                        projected_state[:, (1 * self.cell_size):(2 * self.cell_size)])
-            memory_init = torch.tanh(projected_input[:, (2 * self.cell_size):(3 * self.cell_size)] +
-                                     projected_state[:, (2 * self.cell_size):(3 * self.cell_size)])
-            output_gate = torch.sigmoid(projected_input[:, (3 * self.cell_size):(4 * self.cell_size)] +
-                                        projected_state[:, (3 * self.cell_size):(4 * self.cell_size)])
+            input_gate = torch.sigmoid(
+                projected_input[:, (0 * self.cell_size) : (1 * self.cell_size)]
+                + projected_state[:, (0 * self.cell_size) : (1 * self.cell_size)]
+            )
+            forget_gate = torch.sigmoid(
+                projected_input[:, (1 * self.cell_size) : (2 * self.cell_size)]
+                + projected_state[:, (1 * self.cell_size) : (2 * self.cell_size)]
+            )
+            memory_init = torch.tanh(
+                projected_input[:, (2 * self.cell_size) : (3 * self.cell_size)]
+                + projected_state[:, (2 * self.cell_size) : (3 * self.cell_size)]
+            )
+            output_gate = torch.sigmoid(
+                projected_input[:, (3 * self.cell_size) : (4 * self.cell_size)]
+                + projected_state[:, (3 * self.cell_size) : (4 * self.cell_size)]
+            )
             memory = input_gate * memory_init + forget_gate * previous_memory
 
             # Here is the non-standard part of this LSTM cell; first, we clip the
@@ -201,7 +222,9 @@ class LstmCellWithProjection(torch.nn.Module):
 
             if self.memory_cell_clip_value:
                 # pylint: disable=invalid-unary-operand-type
-                memory = torch.clamp(memory, -self.memory_cell_clip_value, self.memory_cell_clip_value)
+                memory = torch.clamp(
+                    memory, -self.memory_cell_clip_value, self.memory_cell_clip_value
+                )
 
             # shape (current_length_index, cell_size)
             pre_projection_timestep_output = output_gate * torch.tanh(memory)
@@ -210,28 +233,34 @@ class LstmCellWithProjection(torch.nn.Module):
             timestep_output = self.state_projection(pre_projection_timestep_output)
             if self.state_projection_clip_value:
                 # pylint: disable=invalid-unary-operand-type
-                timestep_output = torch.clamp(timestep_output,
-                                              -self.state_projection_clip_value,
-                                              self.state_projection_clip_value)
+                timestep_output = torch.clamp(
+                    timestep_output,
+                    -self.state_projection_clip_value,
+                    self.state_projection_clip_value,
+                )
 
             # Only do dropout if the dropout prob is > 0.0 and we are in training mode.
             if dropout_mask is not None:
-                timestep_output = timestep_output * dropout_mask[0: current_length_index + 1]
+                timestep_output = (
+                    timestep_output * dropout_mask[0 : current_length_index + 1]
+                )
 
             # We've been doing computation with less than the full batch, so here we create a new
             # variable for the the whole batch at this timestep and insert the result for the
             # relevant elements of the batch into it.
             full_batch_previous_memory = full_batch_previous_memory.data.clone()
             full_batch_previous_state = full_batch_previous_state.data.clone()
-            full_batch_previous_memory[0:current_length_index + 1] = memory
-            full_batch_previous_state[0:current_length_index + 1] = timestep_output
-            output_accumulator[0:current_length_index + 1, index] = timestep_output
+            full_batch_previous_memory[0 : current_length_index + 1] = memory
+            full_batch_previous_state[0 : current_length_index + 1] = timestep_output
+            output_accumulator[0 : current_length_index + 1, index] = timestep_output
 
         # Mimic the pytorch API by returning state in the following shape:
         # (num_layers * num_directions, batch_size, ...). As this
         # LSTM cell cannot be stacked, the first dimension here is just 1.
-        final_state = (full_batch_previous_state.unsqueeze(0),
-                       full_batch_previous_memory.unsqueeze(0))
+        final_state = (
+            full_batch_previous_state.unsqueeze(0),
+            full_batch_previous_memory.unsqueeze(0),
+        )
 
         return output_accumulator, final_state
 
@@ -240,23 +269,31 @@ class LstmbiLm(nn.Module):
     def __init__(self, config):
         super(LstmbiLm, self).__init__()
         self.config = config
-        self.encoder = nn.LSTM(self.config['lstm']['projection_dim'],
-                               self.config['lstm']['dim'],
-                               num_layers=self.config['lstm']['n_layers'],
-                               bidirectional=True,
-                               batch_first=True,
-                               dropout=self.config['dropout'])
-        self.projection = nn.Linear(self.config['lstm']['dim'], self.config['lstm']['projection_dim'], bias=True)
+        self.encoder = nn.LSTM(
+            self.config["lstm"]["projection_dim"],
+            self.config["lstm"]["dim"],
+            num_layers=self.config["lstm"]["n_layers"],
+            bidirectional=True,
+            batch_first=True,
+            dropout=self.config["dropout"],
+        )
+        self.projection = nn.Linear(
+            self.config["lstm"]["dim"], self.config["lstm"]["projection_dim"], bias=True
+        )
 
     def forward(self, inputs, seq_len):
         sort_lens, sort_idx = torch.sort(seq_len, dim=0, descending=True)
         inputs = inputs[sort_idx]
-        inputs = nn.utils.rnn.pack_padded_sequence(inputs, sort_lens, batch_first=self.batch_first)
+        inputs = nn.utils.rnn.pack_padded_sequence(
+            inputs, sort_lens, batch_first=self.batch_first
+        )
         output, hx = self.encoder(inputs, None)  # -> [N,L,C]
-        output, _ = nn.utils.rnn.pad_packed_sequence(output, batch_first=self.batch_first)
+        output, _ = nn.utils.rnn.pad_packed_sequence(
+            output, batch_first=self.batch_first
+        )
         _, unsort_idx = torch.sort(sort_idx, dim=0, descending=False)
         output = output[unsort_idx]
-        forward, backward = output.split(self.config['lstm']['dim'], 2)
+        forward, backward = output.split(self.config["lstm"]["dim"], 2)
         return torch.cat([self.projection(forward), self.projection(backward)], dim=2)
 
 
@@ -264,12 +301,12 @@ class ElmobiLm(torch.nn.Module):
     def __init__(self, config):
         super(ElmobiLm, self).__init__()
         self.config = config
-        input_size = config['lstm']['projection_dim']
-        hidden_size = config['lstm']['projection_dim']
-        cell_size = config['lstm']['dim']
-        num_layers = config['lstm']['n_layers']
-        memory_cell_clip_value = config['lstm']['cell_clip']
-        state_projection_clip_value = config['lstm']['proj_clip']
+        input_size = config["lstm"]["projection_dim"]
+        hidden_size = config["lstm"]["projection_dim"]
+        cell_size = config["lstm"]["dim"]
+        num_layers = config["lstm"]["n_layers"]
+        memory_cell_clip_value = config["lstm"]["cell_clip"]
+        state_projection_clip_value = config["lstm"]["proj_clip"]
         recurrent_dropout_probability = 0.0
 
         self.input_size = input_size
@@ -283,24 +320,28 @@ class ElmobiLm(torch.nn.Module):
         lstm_input_size = input_size
         go_forward = True
         for layer_index in range(num_layers):
-            forward_layer = LstmCellWithProjection(lstm_input_size,
-                                                   hidden_size,
-                                                   cell_size,
-                                                   go_forward,
-                                                   recurrent_dropout_probability,
-                                                   memory_cell_clip_value,
-                                                   state_projection_clip_value)
-            backward_layer = LstmCellWithProjection(lstm_input_size,
-                                                    hidden_size,
-                                                    cell_size,
-                                                    not go_forward,
-                                                    recurrent_dropout_probability,
-                                                    memory_cell_clip_value,
-                                                    state_projection_clip_value)
+            forward_layer = LstmCellWithProjection(
+                lstm_input_size,
+                hidden_size,
+                cell_size,
+                go_forward,
+                recurrent_dropout_probability,
+                memory_cell_clip_value,
+                state_projection_clip_value,
+            )
+            backward_layer = LstmCellWithProjection(
+                lstm_input_size,
+                hidden_size,
+                cell_size,
+                not go_forward,
+                recurrent_dropout_probability,
+                memory_cell_clip_value,
+                state_projection_clip_value,
+            )
             lstm_input_size = hidden_size
 
-            self.add_module('forward_layer_{}'.format(layer_index), forward_layer)
-            self.add_module('backward_layer_{}'.format(layer_index), backward_layer)
+            self.add_module("forward_layer_{}".format(layer_index), forward_layer)
+            self.add_module("backward_layer_{}".format(layer_index), backward_layer)
             forward_layers.append(forward_layer)
             backward_layers.append(backward_layer)
         self.forward_layers = forward_layers
@@ -322,10 +363,11 @@ class ElmobiLm(torch.nn.Module):
         output = output[:, unsort_idx]
         return output
 
-    def _lstm_forward(self,
-                      inputs: PackedSequence,
-                      initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> \
-            Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+    def _lstm_forward(
+        self,
+        inputs: PackedSequence,
+        initial_state: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
+    ) -> Tuple[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """
         Parameters
         ----------
@@ -347,13 +389,18 @@ class ElmobiLm(torch.nn.Module):
         """
 
         if initial_state is None:
-            hidden_states: List[Optional[Tuple[torch.Tensor,
-                                               torch.Tensor]]] = [None] * len(self.forward_layers)
+            hidden_states: List[Optional[Tuple[torch.Tensor, torch.Tensor]]] = [
+                None
+            ] * len(self.forward_layers)
         elif initial_state[0].size()[0] != len(self.forward_layers):
-            raise Exception("Initial states were passed to forward() but the number of "
-                            "initial states does not match the number of layers.")
+            raise Exception(
+                "Initial states were passed to forward() but the number of "
+                "initial states does not match the number of layers."
+            )
         else:
-            hidden_states = list(zip(initial_state[0].split(1, 0), initial_state[1].split(1, 0)))
+            hidden_states = list(
+                zip(initial_state[0].split(1, 0), initial_state[1].split(1, 0))
+            )
 
         inputs, batch_lengths = pad_packed_sequence(inputs, batch_first=True)
         forward_output_sequence = inputs
@@ -362,47 +409,57 @@ class ElmobiLm(torch.nn.Module):
         final_states = []
         sequence_outputs = []
         for layer_index, state in enumerate(hidden_states):
-            forward_layer = getattr(self, 'forward_layer_{}'.format(layer_index))
-            backward_layer = getattr(self, 'backward_layer_{}'.format(layer_index))
+            forward_layer = getattr(self, "forward_layer_{}".format(layer_index))
+            backward_layer = getattr(self, "backward_layer_{}".format(layer_index))
 
             forward_cache = forward_output_sequence
             backward_cache = backward_output_sequence
 
             if state is not None:
-                forward_hidden_state, backward_hidden_state = state[0].split(self.hidden_size, 2)
-                forward_memory_state, backward_memory_state = state[1].split(self.cell_size, 2)
+                forward_hidden_state, backward_hidden_state = state[0].split(
+                    self.hidden_size, 2
+                )
+                forward_memory_state, backward_memory_state = state[1].split(
+                    self.cell_size, 2
+                )
                 forward_state = (forward_hidden_state, forward_memory_state)
                 backward_state = (backward_hidden_state, backward_memory_state)
             else:
                 forward_state = None
                 backward_state = None
 
-            forward_output_sequence, forward_state = forward_layer(forward_output_sequence,
-                                                                   batch_lengths,
-                                                                   forward_state)
-            backward_output_sequence, backward_state = backward_layer(backward_output_sequence,
-                                                                      batch_lengths,
-                                                                      backward_state)
+            forward_output_sequence, forward_state = forward_layer(
+                forward_output_sequence, batch_lengths, forward_state
+            )
+            backward_output_sequence, backward_state = backward_layer(
+                backward_output_sequence, batch_lengths, backward_state
+            )
             # Skip connections, just adding the input to the output.
             if layer_index != 0:
                 forward_output_sequence += forward_cache
                 backward_output_sequence += backward_cache
 
-            sequence_outputs.append(torch.cat([forward_output_sequence,
-                                               backward_output_sequence], -1))
+            sequence_outputs.append(
+                torch.cat([forward_output_sequence, backward_output_sequence], -1)
+            )
             # Append the state tuples in a list, so that we can return
             # the final states for all the layers.
-            final_states.append((torch.cat([forward_state[0], backward_state[0]], -1),
-                                 torch.cat([forward_state[1], backward_state[1]], -1)))
+            final_states.append(
+                (
+                    torch.cat([forward_state[0], backward_state[0]], -1),
+                    torch.cat([forward_state[1], backward_state[1]], -1),
+                )
+            )
 
         stacked_sequence_outputs: torch.FloatTensor = torch.stack(sequence_outputs)
         # Stack the hidden state and memory for each layer in。to 2 tensors of shape
         # (num_layers, batch_size, hidden_size) and (num_layers, batch_size, cell_size)
         # respectively.
         final_hidden_states, final_memory_states = zip(*final_states)
-        final_state_tuple: Tuple[torch.FloatTensor,
-                                 torch.FloatTensor] = (torch.cat(final_hidden_states, 0),
-                                                       torch.cat(final_memory_states, 0))
+        final_state_tuple: Tuple[torch.FloatTensor, torch.FloatTensor] = (
+            torch.cat(final_hidden_states, 0),
+            torch.cat(final_memory_states, 0),
+        )
         return stacked_sequence_outputs, final_state_tuple
 
 
@@ -413,22 +470,22 @@ class ConvTokenEmbedder(nn.Module):
         self.word_emb_layer = word_emb_layer
         self.char_emb_layer = char_emb_layer
 
-        self.output_dim = config['lstm']['projection_dim']
+        self.output_dim = config["lstm"]["projection_dim"]
         self._options = config
 
-        char_cnn_options = self._options['char_cnn']
-        if char_cnn_options['activation'] == 'tanh':
+        char_cnn_options = self._options["char_cnn"]
+        if char_cnn_options["activation"] == "tanh":
             self.activation = torch.tanh
-        elif char_cnn_options['activation'] == 'relu':
+        elif char_cnn_options["activation"] == "relu":
             self.activation = torch.nn.functional.relu
         else:
             raise Exception("Unknown activation")
 
         if char_emb_layer is not None:
             self.char_conv = []
-            cnn_config = config['char_cnn']
-            filters = cnn_config['filters']
-            char_embed_dim = cnn_config['embedding']['dim']
+            cnn_config = config["char_cnn"]
+            filters = cnn_config["filters"]
+            char_embed_dim = cnn_config["embedding"]["dim"]
             convolutions = []
 
             for i, (width, num) in enumerate(filters):
@@ -436,17 +493,19 @@ class ConvTokenEmbedder(nn.Module):
                     in_channels=char_embed_dim,
                     out_channels=num,
                     kernel_size=width,
-                    bias=True
+                    bias=True,
                 )
                 convolutions.append(conv)
-                self.add_module('char_conv_{}'.format(i), conv)
+                self.add_module("char_conv_{}".format(i), conv)
 
             self._convolutions = convolutions
 
             n_filters = sum(f[1] for f in filters)
-            n_highway = cnn_config['n_highway']
+            n_highway = cnn_config["n_highway"]
 
-            self._highways = Highway(n_filters, n_highway, activation=torch.nn.functional.relu)
+            self._highways = Highway(
+                n_filters, n_highway, activation=torch.nn.functional.relu
+            )
 
             self._projection = torch.nn.Linear(n_filters, self.output_dim, bias=True)
 
@@ -463,14 +522,16 @@ class ConvTokenEmbedder(nn.Module):
         #     self._char_embedding_weights
         # )
         batch_size, sequence_length, max_char_len = chars.size()
-        character_embedding = self.char_emb_layer(chars).reshape(batch_size * sequence_length, max_char_len, -1)
+        character_embedding = self.char_emb_layer(chars).reshape(
+            batch_size * sequence_length, max_char_len, -1
+        )
         # run convolutions
 
         # (batch_size * sequence_length, embed_dim, max_chars_per_token)
         character_embedding = torch.transpose(character_embedding, 1, 2)
         convs = []
         for i in range(len(self._convolutions)):
-            conv = getattr(self, 'char_conv_{}'.format(i))
+            conv = getattr(self, "char_conv_{}".format(i))
             convolved = conv(character_embedding)
             # (batch_size * sequence_length, n_filters for this width)
             convolved, _ = torch.max(convolved, dim=-1)
@@ -509,14 +570,17 @@ class Highway(torch.nn.Module):
         The non-linearity to use in the highway layers.
     """
 
-    def __init__(self,
-                 input_dim: int,
-                 num_layers: int = 1,
-                 activation: Callable[[torch.Tensor], torch.Tensor] = torch.nn.functional.relu) -> None:
+    def __init__(
+        self,
+        input_dim: int,
+        num_layers: int = 1,
+        activation: Callable[[torch.Tensor], torch.Tensor] = torch.nn.functional.relu,
+    ) -> None:
         super(Highway, self).__init__()
         self._input_dim = input_dim
-        self._layers = torch.nn.ModuleList([torch.nn.Linear(input_dim, input_dim * 2)
-                                            for _ in range(num_layers)])
+        self._layers = torch.nn.ModuleList(
+            [torch.nn.Linear(input_dim, input_dim * 2) for _ in range(num_layers)]
+        )
         self._activation = activation
         for layer in self._layers:
             # We should bias the highway layer to just carry its input forward.  We do that by
@@ -532,8 +596,10 @@ class Highway(torch.nn.Module):
             linear_part = current_input
             # NOTE: if you modify this, think about whether you should modify the initialization
             # above, too.
-            nonlinear_part = projected_input[:, (0 * self._input_dim):(1 * self._input_dim)]
-            gate = projected_input[:, (1 * self._input_dim):(2 * self._input_dim)]
+            nonlinear_part = projected_input[
+                :, (0 * self._input_dim) : (1 * self._input_dim)
+            ]
+            gate = projected_input[:, (1 * self._input_dim) : (2 * self._input_dim)]
             nonlinear_part = self._activation(nonlinear_part)
             gate = torch.sigmoid(gate)
             current_input = gate * linear_part + (1 - gate) * nonlinear_part

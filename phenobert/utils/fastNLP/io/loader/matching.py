@@ -8,7 +8,7 @@ __all__ = [
     "QuoraLoader",
     "BQCorpusLoader",
     "CNXNLILoader",
-    "LCQMCLoader"
+    "LCQMCLoader",
 ]
 
 import os
@@ -47,36 +47,46 @@ class MNLILoader(Loader):
        "...", "...", "..."
 
     """
-    
+
     def __init__(self):
         super().__init__()
-    
+
     def _load(self, path: str):
         ds = DataSet()
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, "r", encoding="utf-8") as f:
             f.readline()  # 跳过header
-            if path.endswith("test_matched.tsv") or path.endswith('test_mismatched.tsv'):
+            if path.endswith("test_matched.tsv") or path.endswith(
+                "test_mismatched.tsv"
+            ):
                 warnings.warn("RTE's test file has no target.")
                 for line in f:
                     line = line.strip()
                     if line:
-                        parts = line.split('\t')
+                        parts = line.split("\t")
                         raw_words1 = parts[8]
                         raw_words2 = parts[9]
                         if raw_words1 and raw_words2:
-                            ds.append(Instance(raw_words1=raw_words1, raw_words2=raw_words2))
+                            ds.append(
+                                Instance(raw_words1=raw_words1, raw_words2=raw_words2)
+                            )
             else:
                 for line in f:
                     line = line.strip()
                     if line:
-                        parts = line.split('\t')
+                        parts = line.split("\t")
                         raw_words1 = parts[8]
                         raw_words2 = parts[9]
                         target = parts[-1]
                         if raw_words1 and raw_words2 and target:
-                            ds.append(Instance(raw_words1=raw_words1, raw_words2=raw_words2, target=target))
+                            ds.append(
+                                Instance(
+                                    raw_words1=raw_words1,
+                                    raw_words2=raw_words2,
+                                    target=target,
+                                )
+                            )
         return ds
-    
+
     def load(self, paths: str = None):
         """
 
@@ -90,25 +100,29 @@ class MNLILoader(Loader):
             paths = self.download()
         if not os.path.isdir(paths):
             raise NotADirectoryError(f"{paths} is not a valid directory.")
-        
-        files = {'dev_matched': "dev_matched.tsv",
-                 "dev_mismatched": "dev_mismatched.tsv",
-                 "test_matched": "test_matched.tsv",
-                 "test_mismatched": "test_mismatched.tsv",
-                 "train": 'train.tsv'}
-        
+
+        files = {
+            "dev_matched": "dev_matched.tsv",
+            "dev_mismatched": "dev_mismatched.tsv",
+            "test_matched": "test_matched.tsv",
+            "test_mismatched": "test_mismatched.tsv",
+            "train": "train.tsv",
+        }
+
         datasets = {}
         for name, filename in files.items():
             filepath = os.path.join(paths, filename)
             if not os.path.isfile(filepath):
-                if 'test' not in name:
-                    raise FileNotFoundError(f"{name} not found in directory {filepath}.")
+                if "test" not in name:
+                    raise FileNotFoundError(
+                        f"{name} not found in directory {filepath}."
+                    )
             datasets[name] = self._load(filepath)
-        
+
         data_bundle = DataBundle(datasets=datasets)
-        
+
         return data_bundle
-    
+
     def download(self):
         """
         如果你使用了这个数据，请引用
@@ -116,7 +130,7 @@ class MNLILoader(Loader):
         https://www.nyu.edu/projects/bowman/multinli/paper.pdf
         :return:
         """
-        output_dir = self._get_dataset_path('mnli')
+        output_dir = self._get_dataset_path("mnli")
         return output_dir
 
 
@@ -146,14 +160,16 @@ class SNLILoader(JsonLoader):
        "...", "...", "..."
 
     """
-    
+
     def __init__(self):
-        super().__init__(fields={
-            'sentence1': Const.RAW_WORDS(0),
-            'sentence2': Const.RAW_WORDS(1),
-            'gold_label': Const.TARGET,
-        })
-    
+        super().__init__(
+            fields={
+                "sentence1": Const.RAW_WORDS(0),
+                "sentence2": Const.RAW_WORDS(1),
+                "gold_label": Const.TARGET,
+            }
+        )
+
     def load(self, paths: Union[str, Dict[str, str]] = None) -> DataBundle:
         """
         从指定一个或多个路径中的文件中读取数据，返回 :class:`~fastNLP.io.DataBundle` 。
@@ -170,20 +186,22 @@ class SNLILoader(JsonLoader):
             paths = self.download()
         if paths:
             if os.path.isdir(paths):
-                if not os.path.isfile(os.path.join(paths, 'snli_1.0_train.jsonl')):
-                    raise FileNotFoundError(f"snli_1.0_train.jsonl is not found in {paths}")
-                _paths['train'] = os.path.join(paths, 'snli_1.0_train.jsonl')
-                for filename in ['snli_1.0_dev.jsonl', 'snli_1.0_test.jsonl']:
+                if not os.path.isfile(os.path.join(paths, "snli_1.0_train.jsonl")):
+                    raise FileNotFoundError(
+                        f"snli_1.0_train.jsonl is not found in {paths}"
+                    )
+                _paths["train"] = os.path.join(paths, "snli_1.0_train.jsonl")
+                for filename in ["snli_1.0_dev.jsonl", "snli_1.0_test.jsonl"]:
                     filepath = os.path.join(paths, filename)
-                    _paths[filename.split('_')[-1].split('.')[0]] = filepath
+                    _paths[filename.split("_")[-1].split(".")[0]] = filepath
                 paths = _paths
             else:
                 raise NotADirectoryError(f"{paths} is not a valid directory.")
-        
+
         datasets = {name: self._load(path) for name, path in paths.items()}
         data_bundle = DataBundle(datasets=datasets)
         return data_bundle
-    
+
     def download(self):
         """
         如果您的文章使用了这份数据，请引用
@@ -192,7 +210,7 @@ class SNLILoader(JsonLoader):
 
         :return: str
         """
-        return self._get_dataset_path('snli')
+        return self._get_dataset_path("snli")
 
 
 class QNLILoader(JsonLoader):
@@ -216,37 +234,45 @@ class QNLILoader(JsonLoader):
     test数据集没有target列
 
     """
-    
+
     def __init__(self):
         super().__init__()
-    
+
     def _load(self, path):
         ds = DataSet()
-        
-        with open(path, 'r', encoding='utf-8') as f:
+
+        with open(path, "r", encoding="utf-8") as f:
             f.readline()  # 跳过header
             if path.endswith("test.tsv"):
                 warnings.warn("QNLI's test file has no target.")
                 for line in f:
                     line = line.strip()
                     if line:
-                        parts = line.split('\t')
+                        parts = line.split("\t")
                         raw_words1 = parts[1]
                         raw_words2 = parts[2]
                         if raw_words1 and raw_words2:
-                            ds.append(Instance(raw_words1=raw_words1, raw_words2=raw_words2))
+                            ds.append(
+                                Instance(raw_words1=raw_words1, raw_words2=raw_words2)
+                            )
             else:
                 for line in f:
                     line = line.strip()
                     if line:
-                        parts = line.split('\t')
+                        parts = line.split("\t")
                         raw_words1 = parts[1]
                         raw_words2 = parts[2]
                         target = parts[-1]
                         if raw_words1 and raw_words2 and target:
-                            ds.append(Instance(raw_words1=raw_words1, raw_words2=raw_words2, target=target))
+                            ds.append(
+                                Instance(
+                                    raw_words1=raw_words1,
+                                    raw_words2=raw_words2,
+                                    target=target,
+                                )
+                            )
         return ds
-    
+
     def download(self):
         """
         如果您的实验使用到了该数据，请引用
@@ -255,7 +281,7 @@ class QNLILoader(JsonLoader):
 
         :return:
         """
-        return self._get_dataset_path('qnli')
+        return self._get_dataset_path("qnli")
 
 
 class RTELoader(Loader):
@@ -278,37 +304,45 @@ class RTELoader(Loader):
 
     test数据集没有target列
     """
-    
+
     def __init__(self):
         super().__init__()
-    
+
     def _load(self, path: str):
         ds = DataSet()
-        
-        with open(path, 'r', encoding='utf-8') as f:
+
+        with open(path, "r", encoding="utf-8") as f:
             f.readline()  # 跳过header
             if path.endswith("test.tsv"):
                 warnings.warn("RTE's test file has no target.")
                 for line in f:
                     line = line.strip()
                     if line:
-                        parts = line.split('\t')
+                        parts = line.split("\t")
                         raw_words1 = parts[1]
                         raw_words2 = parts[2]
                         if raw_words1 and raw_words2:
-                            ds.append(Instance(raw_words1=raw_words1, raw_words2=raw_words2))
+                            ds.append(
+                                Instance(raw_words1=raw_words1, raw_words2=raw_words2)
+                            )
             else:
                 for line in f:
                     line = line.strip()
                     if line:
-                        parts = line.split('\t')
+                        parts = line.split("\t")
                         raw_words1 = parts[1]
                         raw_words2 = parts[2]
                         target = parts[-1]
                         if raw_words1 and raw_words2 and target:
-                            ds.append(Instance(raw_words1=raw_words1, raw_words2=raw_words2, target=target))
+                            ds.append(
+                                Instance(
+                                    raw_words1=raw_words1,
+                                    raw_words2=raw_words2,
+                                    target=target,
+                                )
+                            )
         return ds
-    
+
     def download(self):
         """
         如果您的实验使用到了该数据，请引用GLUE Benchmark
@@ -317,7 +351,7 @@ class RTELoader(Loader):
 
         :return:
         """
-        return self._get_dataset_path('rte')
+        return self._get_dataset_path("rte")
 
 
 class QuoraLoader(Loader):
@@ -342,25 +376,31 @@ class QuoraLoader(Loader):
         "...","...","..."
 
     """
-    
+
     def __init__(self):
         super().__init__()
-    
+
     def _load(self, path: str):
         ds = DataSet()
-        
-        with open(path, 'r', encoding='utf-8') as f:
+
+        with open(path, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line:
-                    parts = line.split('\t')
+                    parts = line.split("\t")
                     raw_words1 = parts[1]
                     raw_words2 = parts[2]
                     target = parts[0]
                     if raw_words1 and raw_words2 and target:
-                        ds.append(Instance(raw_words1=raw_words1, raw_words2=raw_words2, target=target))
+                        ds.append(
+                            Instance(
+                                raw_words1=raw_words1,
+                                raw_words2=raw_words2,
+                                target=target,
+                            )
+                        )
         return ds
-    
+
     def download(self):
         """
         由于版权限制，不能提供自动下载功能。可参考
@@ -387,7 +427,7 @@ class CNXNLILoader(Loader):
 
     .. csv-table::
        :header: "raw_chars1", "raw_chars2", "target"
-       
+
        "我们 家里 有 一个 但 我 没 找到 我 可以 用 的 时间", "我们 家里 有 一个 但 我 从来 没有 时间 使用 它 .", "0"
        "...", "...", "..."
 
@@ -398,48 +438,67 @@ class CNXNLILoader(Loader):
 
     def _load(self, path: str = None):
         ds_all = DataSet()
-        with open(path, 'r', encoding='utf-8') as f:
-            head_name_list = f.readline().strip().split('\t')
-            sentence1_index = head_name_list.index('sentence1')
-            sentence2_index = head_name_list.index('sentence2')
-            gold_label_index = head_name_list.index('gold_label')
-            language_index = head_name_list.index(('language'))
+        with open(path, "r", encoding="utf-8") as f:
+            head_name_list = f.readline().strip().split("\t")
+            sentence1_index = head_name_list.index("sentence1")
+            sentence2_index = head_name_list.index("sentence2")
+            gold_label_index = head_name_list.index("gold_label")
+            language_index = head_name_list.index(("language"))
 
             for line in f:
                 line = line.strip()
-                raw_instance = line.split('\t')
+                raw_instance = line.split("\t")
                 sentence1 = raw_instance[sentence1_index]
                 sentence2 = raw_instance[sentence2_index]
                 gold_label = raw_instance[gold_label_index]
                 language = raw_instance[language_index]
                 if sentence1:
-                    ds_all.append(Instance(sentence1=sentence1, sentence2=sentence2, gold_label=gold_label, language=language))
+                    ds_all.append(
+                        Instance(
+                            sentence1=sentence1,
+                            sentence2=sentence2,
+                            gold_label=gold_label,
+                            language=language,
+                        )
+                    )
 
         ds_zh = DataSet()
         for i in ds_all:
-            if i['language'] == 'zh':
-                ds_zh.append(Instance(raw_chars1=i['sentence1'], raw_chars2=i['sentence2'], target=i['gold_label']))
+            if i["language"] == "zh":
+                ds_zh.append(
+                    Instance(
+                        raw_chars1=i["sentence1"],
+                        raw_chars2=i["sentence2"],
+                        target=i["gold_label"],
+                    )
+                )
 
         return ds_zh
 
     def _load_train(self, path: str = None):
         ds = DataSet()
 
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, "r", encoding="utf-8") as f:
             next(f)
             for line in f:
-                raw_instance = line.strip().split('\t')
-                premise = "".join(raw_instance[0].split())# 把已经分好词的premise和hypo强制还原为character segmentation
+                raw_instance = line.strip().split("\t")
+                premise = "".join(
+                    raw_instance[0].split()
+                )  # 把已经分好词的premise和hypo强制还原为character segmentation
                 hypo = "".join(raw_instance[1].split())
                 label = "".join(raw_instance[-1].split())
                 if premise:
                     ds.append(Instance(premise=premise, hypo=hypo, label=label))
 
-        ds.rename_field('label', 'target')
-        ds.rename_field('premise', 'raw_chars1')
-        ds.rename_field('hypo', 'raw_chars2')
-        ds.apply(lambda i: "".join(i['raw_chars1'].split()), new_field_name='raw_chars1')
-        ds.apply(lambda i: "".join(i['raw_chars2'].split()), new_field_name='raw_chars2')
+        ds.rename_field("label", "target")
+        ds.rename_field("premise", "raw_chars1")
+        ds.rename_field("hypo", "raw_chars2")
+        ds.apply(
+            lambda i: "".join(i["raw_chars1"].split()), new_field_name="raw_chars1"
+        )
+        ds.apply(
+            lambda i: "".join(i["raw_chars2"].split()), new_field_name="raw_chars2"
+        )
         return ds
 
     def load(self, paths: Union[str, Dict[str, str]] = None) -> DataBundle:
@@ -448,7 +507,7 @@ class CNXNLILoader(Loader):
         paths = check_loader_paths(paths)
         datasets = {}
         for name, path in paths.items():
-            if name == 'train':
+            if name == "train":
                 datasets[name] = self._load_train(path)
             else:
                 datasets[name] = self._load(path)
@@ -463,7 +522,7 @@ class CNXNLILoader(Loader):
         https://arxiv.org/pdf/1809.05053.pdf 有使用
         :return:
         """
-        output_dir = self._get_dataset_path('cn-xnli')
+        output_dir = self._get_dataset_path("cn-xnli")
         return output_dir
 
 
@@ -483,7 +542,7 @@ class BQCorpusLoader(Loader):
 
     .. csv-table::
        :header: "raw_chars1", "raw_chars2", "target"
-       
+
        "综合评分不足什么原因", "综合评估的依据", "0"
        "什么时候我能使用微粒贷", "你就赶快给我开通就行了", "0"
        "...", "...", "..."
@@ -495,17 +554,21 @@ class BQCorpusLoader(Loader):
 
     def _load(self, path: str = None):
         ds = DataSet()
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, "r", encoding="utf-8") as f:
             next(f)
             for line in f:
                 line = line.strip()
                 target = line[-1]
-                sep_index = line.index(',')
+                sep_index = line.index(",")
                 raw_chars1 = line[:sep_index]
-                raw_chars2 = line[sep_index + 1:]
+                raw_chars2 = line[sep_index + 1 :]
 
                 if raw_chars1:
-                    ds.append(Instance(raw_chars1=raw_chars1, raw_chars2=raw_chars2, target=target))
+                    ds.append(
+                        Instance(
+                            raw_chars1=raw_chars1, raw_chars2=raw_chars2, target=target
+                        )
+                    )
         return ds
 
     def download(self):
@@ -522,7 +585,7 @@ class BQCorpusLoader(Loader):
 class LCQMCLoader(Loader):
     r"""
     数据集简介：句对匹配（question matching）
-    
+
     原始数据为：
 
     Example::
@@ -530,17 +593,17 @@ class LCQMCLoader(Loader):
         喜欢打篮球的男生喜欢什么样的女生	爱打篮球的男生喜欢什么样的女生	1
         你帮我设计小说的封面吧	谁能帮我给小说设计个封面？	0
 
-    
+
     读取后的Dataset将具有以下的数据结构
-    
+
     .. csv-table::
        :header: "raw_chars1", "raw_chars2", "target"
-       
+
        "喜欢打篮球的男生喜欢什么样的女生", "爱打篮球的男生喜欢什么样的女生", "1"
        "你帮我设计小说的封面吧", "妇可以戴耳机听音乐吗?", "0"
        "...", "...", "..."
-    
-    
+
+
     """
 
     def __init__(self):
@@ -548,10 +611,10 @@ class LCQMCLoader(Loader):
 
     def _load(self, path: str = None):
         ds = DataSet()
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
-                line_segments = line.split('\t')
+                line_segments = line.split("\t")
                 assert len(line_segments) == 3
 
                 target = line_segments[-1]
@@ -560,7 +623,11 @@ class LCQMCLoader(Loader):
                 raw_chars2 = line_segments[1]
 
                 if raw_chars1:
-                    ds.append(Instance(raw_chars1=raw_chars1, raw_chars2=raw_chars2, target=target))
+                    ds.append(
+                        Instance(
+                            raw_chars1=raw_chars1, raw_chars2=raw_chars2, target=target
+                        )
+                    )
         return ds
 
     def download(self):
@@ -572,5 +639,3 @@ class LCQMCLoader(Loader):
         :return:
         """
         raise RuntimeError("LCQMC cannot be downloaded automatically.")
-
-

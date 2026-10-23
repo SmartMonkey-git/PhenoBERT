@@ -2,10 +2,8 @@
 .. todo::
     doc
 """
-__all__ = [
-    "EmbedLoader",
-    "EmbeddingOption",
-]
+
+__all__ = ["EmbedLoader", "EmbeddingOption"]
 
 import logging
 import os
@@ -18,16 +16,11 @@ from ..core.vocabulary import Vocabulary
 
 
 class EmbeddingOption(Option):
-    def __init__(self,
-                 embed_filepath=None,
-                 dtype=np.float32,
-                 normalize=True,
-                 error='ignore'):
+    def __init__(
+        self, embed_filepath=None, dtype=np.float32, normalize=True, error="ignore"
+    ):
         super().__init__(
-            embed_filepath=embed_filepath,
-            dtype=dtype,
-            normalize=normalize,
-            error=error
+            embed_filepath=embed_filepath, dtype=dtype, normalize=normalize, error=error
         )
 
 
@@ -35,13 +28,21 @@ class EmbedLoader:
     """
     用于读取预训练的embedding, 读取结果可直接载入为模型参数。
     """
-    
+
     def __init__(self):
         super(EmbedLoader, self).__init__()
 
     @staticmethod
-    def load_with_vocab(embed_filepath, vocab, dtype=np.float32, padding='<pad>', unknown='<unk>', normalize=True,
-                        error='ignore', init_method=None):
+    def load_with_vocab(
+        embed_filepath,
+        vocab,
+        dtype=np.float32,
+        padding="<pad>",
+        unknown="<unk>",
+        normalize=True,
+        error="ignore",
+        init_method=None,
+    ):
         """
         从embed_filepath这个预训练的词向量中抽取出vocab这个词表的词的embedding。EmbedLoader将自动判断embed_filepath是
         word2vec(第一行只有两个元素)还是glove格式的数据。
@@ -61,7 +62,7 @@ class EmbedLoader:
         assert isinstance(vocab, Vocabulary), "Only fastNLP.Vocabulary is supported."
         if not os.path.exists(embed_filepath):
             raise FileNotFoundError("`{}` does not exist.".format(embed_filepath))
-        with open(embed_filepath, 'r', encoding='utf-8') as f:
+        with open(embed_filepath, "r", encoding="utf-8") as f:
             hit_flags = np.zeros(len(vocab), dtype=bool)
             line = f.readline().strip()
             parts = line.split()
@@ -78,7 +79,7 @@ class EmbedLoader:
             for idx, line in enumerate(f, start_idx):
                 try:
                     parts = line.strip().split()
-                    word = ''.join(parts[:-dim])
+                    word = "".join(parts[:-dim])
                     nums = parts[-dim:]
                     # 对齐unk与pad
                     if word == padding and vocab.padding is not None:
@@ -87,33 +88,47 @@ class EmbedLoader:
                         word = vocab.unknown
                     if word in vocab:
                         index = vocab.to_index(word)
-                        matrix[index] = np.fromstring(' '.join(nums), sep=' ', dtype=dtype, count=dim)
+                        matrix[index] = np.fromstring(
+                            " ".join(nums), sep=" ", dtype=dtype, count=dim
+                        )
                         hit_flags[index] = True
                 except Exception as e:
-                    if error == 'ignore':
+                    if error == "ignore":
                         warnings.warn("Error occurred at the {} line.".format(idx))
                     else:
                         logging.error("Error occurred at the {} line.".format(idx))
                         raise e
             total_hits = sum(hit_flags)
-            logging.info("Found {} out of {} words in the pre-training embedding.".format(total_hits, len(vocab)))
+            logging.info(
+                "Found {} out of {} words in the pre-training embedding.".format(
+                    total_hits, len(vocab)
+                )
+            )
             if init_method is None:
                 found_vectors = matrix[hit_flags]
                 if len(found_vectors) != 0:
                     mean = np.mean(found_vectors, axis=0, keepdims=True)
                     std = np.std(found_vectors, axis=0, keepdims=True)
                     unfound_vec_num = len(vocab) - total_hits
-                    r_vecs = np.random.randn(unfound_vec_num, dim).astype(dtype) * std + mean
+                    r_vecs = (
+                        np.random.randn(unfound_vec_num, dim).astype(dtype) * std + mean
+                    )
                     matrix[hit_flags == False] = r_vecs
 
             if normalize:
                 matrix /= np.linalg.norm(matrix, axis=1, keepdims=True)
-            
+
             return matrix
-    
+
     @staticmethod
-    def load_without_vocab(embed_filepath, dtype=np.float32, padding='<pad>', unknown='<unk>', normalize=True,
-                           error='ignore'):
+    def load_without_vocab(
+        embed_filepath,
+        dtype=np.float32,
+        padding="<pad>",
+        unknown="<unk>",
+        normalize=True,
+        error="ignore",
+    ):
         """
         从embed_filepath中读取预训练的word vector。根据预训练的词表读取embedding并生成一个对应的Vocabulary。
 
@@ -132,8 +147,8 @@ class EmbedLoader:
         vec_dict = {}
         found_unknown = False
         found_pad = False
-        
-        with open(embed_filepath, 'r', encoding='utf-8') as f:
+
+        with open(embed_filepath, "r", encoding="utf-8") as f:
             line = f.readline()
             start = 1
             dim = -1
@@ -145,9 +160,9 @@ class EmbedLoader:
                     parts = line.strip().split()
                     if dim == -1:
                         dim = len(parts) - 1
-                    word = ''.join(parts[:-dim])
+                    word = "".join(parts[:-dim])
                     nums = parts[-dim:]
-                    vec = np.fromstring(' '.join(nums), sep=' ', dtype=dtype, count=dim)
+                    vec = np.fromstring(" ".join(nums), sep=" ", dtype=dtype, count=dim)
                     vec_dict[word] = vec
                     vocab.add_word(word)
                     if unknown is not None and unknown == word:
@@ -155,7 +170,7 @@ class EmbedLoader:
                     if padding is not None and padding == word:
                         found_pad = True
                 except Exception as e:
-                    if error == 'ignore':
+                    if error == "ignore":
                         warnings.warn("Error occurred at the {} line.".format(idx))
                         pass
                     else:
@@ -168,7 +183,9 @@ class EmbedLoader:
                 index = vocab.to_index(key)
                 matrix[index] = vec
 
-            if ((unknown is not None) and (not found_unknown)) or ((padding is not None) and (not found_pad)):
+            if ((unknown is not None) and (not found_unknown)) or (
+                (padding is not None) and (not found_pad)
+            ):
                 start_idx = 0
                 if padding is not None:
                     start_idx += 1
@@ -178,11 +195,13 @@ class EmbedLoader:
                 mean = np.mean(matrix[start_idx:], axis=0, keepdims=True)
                 std = np.std(matrix[start_idx:], axis=0, keepdims=True)
                 if (unknown is not None) and (not found_unknown):
-                    matrix[start_idx - 1] = np.random.randn(1, dim).astype(dtype) * std + mean
+                    matrix[start_idx - 1] = (
+                        np.random.randn(1, dim).astype(dtype) * std + mean
+                    )
                 if (padding is not None) and (not found_pad):
                     matrix[0] = np.random.randn(1, dim).astype(dtype) * std + mean
-            
+
             if normalize:
                 matrix /= np.linalg.norm(matrix, axis=1, keepdims=True)
-            
+
             return matrix, vocab

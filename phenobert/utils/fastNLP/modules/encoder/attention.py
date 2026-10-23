@@ -1,10 +1,6 @@
 """undocumented"""
 
-__all__ = [
-    "MultiHeadAttention",
-    "BiAttention",
-    "SelfAttention",
-]
+__all__ = ["MultiHeadAttention", "BiAttention", "SelfAttention"]
 
 import math
 
@@ -51,7 +47,7 @@ class MultiHeadAttention(nn.Module):
 
     def __init__(self, input_size, key_size, value_size, num_head, dropout=0.1):
         """
-        
+
         :param input_size: int, 输入维度的大小。同时也是输出维度的大小。
         :param key_size: int, 每个head的维度大小。
         :param value_size: int，每个head中value的维度。
@@ -68,7 +64,9 @@ class MultiHeadAttention(nn.Module):
         self.q_in = nn.Linear(input_size, in_size)
         self.k_in = nn.Linear(input_size, in_size)
         self.v_in = nn.Linear(input_size, in_size)
-        self.attention = DotAttention(key_size=key_size, value_size=value_size, dropout=dropout)
+        self.attention = DotAttention(
+            key_size=key_size, value_size=value_size, dropout=dropout
+        )
         self.out = nn.Linear(value_size * num_head, input_size)
         self.reset_parameters()
 
@@ -96,7 +94,7 @@ class MultiHeadAttention(nn.Module):
         v = self.v_in(V).view(batch, sk, n_head, d_v).transpose(1, 2)
 
         if atte_mask_out is not None:
-            atte_mask_out = atte_mask_out[:,None,:,:] # [bsz,1,1,len]
+            atte_mask_out = atte_mask_out[:, None, :, :]  # [bsz,1,1,len]
         atte = self.attention(q, k, v, atte_mask_out).view(batch, n_head, sq, d_v)
 
         # concat all heads, do output linear
@@ -154,20 +152,19 @@ class BiAttention(nn.Module):
         :param torch.Tensor hypothesis_mask: [batch_size, b_seq_len]
         :return: torch.Tensor attended_premises: [batch_size, a_seq_len, hidden_size] torch.Tensor attended_hypotheses: [batch_size, b_seq_len, hidden_size]
         """
-        similarity_matrix = premise_batch.bmm(hypothesis_batch.transpose(2, 1)
-                                              .contiguous())
+        similarity_matrix = premise_batch.bmm(
+            hypothesis_batch.transpose(2, 1).contiguous()
+        )
 
         prem_hyp_attn = _masked_softmax(similarity_matrix, hypothesis_mask)
-        hyp_prem_attn = _masked_softmax(similarity_matrix.transpose(1, 2)
-                                        .contiguous(),
-                                        premise_mask)
+        hyp_prem_attn = _masked_softmax(
+            similarity_matrix.transpose(1, 2).contiguous(), premise_mask
+        )
 
-        attended_premises = _weighted_sum(hypothesis_batch,
-                                          prem_hyp_attn,
-                                          premise_mask)
-        attended_hypotheses = _weighted_sum(premise_batch,
-                                            hyp_prem_attn,
-                                            hypothesis_mask)
+        attended_premises = _weighted_sum(hypothesis_batch, prem_hyp_attn, premise_mask)
+        attended_hypotheses = _weighted_sum(
+            premise_batch, hyp_prem_attn, hypothesis_mask
+        )
 
         return attended_premises, attended_hypotheses
 
@@ -178,9 +175,16 @@ class SelfAttention(nn.Module):
     的Self Attention Module.
     """
 
-    def __init__(self, input_size, attention_unit=300, attention_hops=10, drop=0.5, initial_method=None, ):
+    def __init__(
+        self,
+        input_size,
+        attention_unit=300,
+        attention_hops=10,
+        drop=0.5,
+        initial_method=None,
+    ):
         """
-        
+
         :param int input_size: 输入tensor的hidden维度
         :param int attention_unit: 输出tensor的hidden维度
         :param int attention_hops:
@@ -208,8 +212,8 @@ class SelfAttention(nn.Module):
             self.I = self.I_origin.expand(baz, -1, -1)
             self.I = self.I.to(device=attention.device)
         attention_t = torch.transpose(attention, 1, 2).contiguous()
-        mat = torch.bmm(attention, attention_t) - self.I[:attention.size(0)]
-        ret = (torch.sum(torch.sum((mat ** 2), 2), 1).squeeze() + 1e-10) ** 0.5
+        mat = torch.bmm(attention, attention_t) - self.I[: attention.size(0)]
+        ret = (torch.sum(torch.sum((mat**2), 2), 1).squeeze() + 1e-10) ** 0.5
         return torch.sum(ret) / size[0]
 
     def forward(self, input, input_origin):
@@ -222,13 +226,21 @@ class SelfAttention(nn.Module):
         input = input.contiguous()
         size = input.size()  # [bsz, len, nhid]
 
-        input_origin = input_origin.expand(self.attention_hops, -1, -1)  # [hops,baz, len]
+        input_origin = input_origin.expand(
+            self.attention_hops, -1, -1
+        )  # [hops,baz, len]
         input_origin = input_origin.transpose(0, 1).contiguous()  # [baz, hops,len]
 
-        y1 = self.tanh(self.ws1(self.drop(input)))  # [baz,len,dim] -->[bsz,len, attention-unit]
+        y1 = self.tanh(
+            self.ws1(self.drop(input))
+        )  # [baz,len,dim] -->[bsz,len, attention-unit]
         attention = self.ws2(y1).transpose(1, 2).contiguous()
         # [bsz,len, attention-unit]--> [bsz, len, hop]--> [baz,hop,len]
 
-        attention = attention + (-999999 * (input_origin == 0).float())  # remove the weight on padding token.
+        attention = attention + (
+            -999999 * (input_origin == 0).float()
+        )  # remove the weight on padding token.
         attention = F.softmax(attention, 2)  # [baz ,hop, len]
-        return torch.bmm(attention, input), self._penalization(attention)  # output1 --> [baz ,hop ,nhid]
+        return torch.bmm(attention, input), self._penalization(
+            attention
+        )  # output1 --> [baz ,hop ,nhid]

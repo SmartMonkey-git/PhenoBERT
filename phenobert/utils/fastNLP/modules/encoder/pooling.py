@@ -1,12 +1,6 @@
 """undocumented"""
 
-__all__ = [
-    "MaxPool",
-    "MaxPoolWithMask",
-    "KMaxPool",
-    "AvgPool",
-    "AvgPoolWithMask"
-]
+__all__ = ["MaxPool", "MaxPoolWithMask", "KMaxPool", "AvgPool", "AvgPoolWithMask"]
 import torch
 import torch.nn as nn
 
@@ -14,12 +8,20 @@ import torch.nn as nn
 class MaxPool(nn.Module):
     """
     Max-pooling模块。
-    
+
     """
 
-    def __init__(self, stride=None, padding=0, dilation=1, dimension=1, kernel_size=None, ceil_mode=False):
+    def __init__(
+        self,
+        stride=None,
+        padding=0,
+        dilation=1,
+        dimension=1,
+        kernel_size=None,
+        ceil_mode=False,
+    ):
         """
-        
+
         :param stride: 窗口移动大小，默认为kernel_size
         :param padding: padding的内容，默认为0
         :param dilation: 控制窗口内元素移动距离的大小
@@ -28,7 +30,7 @@ class MaxPool(nn.Module):
         :param ceil_mode:
         """
         super(MaxPool, self).__init__()
-        assert dimension in [1, 2, 3], f'Now we only support 1d, 2d, or 3d Pooling'
+        assert dimension in [1, 2, 3], f"Now we only support 1d, 2d, or 3d Pooling"
         self.dimension = dimension
         self.stride = stride
         self.padding = padding
@@ -40,21 +42,36 @@ class MaxPool(nn.Module):
         if self.dimension == 1:
             x = torch.transpose(x, 1, 2)  # [N,L,C] -> [N,C,L]
             pooling = nn.MaxPool1d(
-                stride=self.stride, padding=self.padding, dilation=self.dilation,
-                kernel_size=self.kernel_size if self.kernel_size is not None else x.size(-1),
-                return_indices=False, ceil_mode=self.ceil_mode
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                kernel_size=self.kernel_size
+                if self.kernel_size is not None
+                else x.size(-1),
+                return_indices=False,
+                ceil_mode=self.ceil_mode,
             )
         elif self.dimension == 2:
             pooling = nn.MaxPool2d(
-                stride=self.stride, padding=self.padding, dilation=self.dilation,
-                kernel_size=self.kernel_size if self.kernel_size is not None else (x.size(-2), x.size(-1)),
-                return_indices=False, ceil_mode=self.ceil_mode
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                kernel_size=self.kernel_size
+                if self.kernel_size is not None
+                else (x.size(-2), x.size(-1)),
+                return_indices=False,
+                ceil_mode=self.ceil_mode,
             )
         else:
             pooling = nn.MaxPool3d(
-                stride=self.stride, padding=self.padding, dilation=self.dilation,
-                kernel_size=self.kernel_size if self.kernel_size is not None else (x.size(-3), x.size(-2), x.size(-1)),
-                return_indices=False, ceil_mode=self.ceil_mode
+                stride=self.stride,
+                padding=self.padding,
+                dilation=self.dilation,
+                kernel_size=self.kernel_size
+                if self.kernel_size is not None
+                else (x.size(-3), x.size(-2), x.size(-1)),
+                return_indices=False,
+                ceil_mode=self.ceil_mode,
             )
         x = pooling(x)
         return x.squeeze(dim=-1)  # [N,C,1] -> [N,C]
@@ -116,9 +133,8 @@ class AvgPool(nn.Module):
         # [N,C,L] -> [N,C]
         kernel_size = x.size(2)
         pooling = nn.AvgPool1d(
-            kernel_size=kernel_size,
-            stride=self.stride,
-            padding=self.padding)
+            kernel_size=kernel_size, stride=self.stride, padding=self.padding
+        )
         x = pooling(x)
         return x.squeeze(dim=-1)
 
@@ -141,4 +157,6 @@ class AvgPoolWithMask(nn.Module):
         :return:
         """
         masks = mask.view(mask.size(0), mask.size(1), -1).float()
-        return torch.sum(tensor * masks.float(), dim=dim) / torch.sum(masks.float(), dim=1)
+        return torch.sum(tensor * masks.float(), dim=dim) / torch.sum(
+            masks.float(), dim=1
+        )

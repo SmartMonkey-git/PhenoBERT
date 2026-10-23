@@ -60,7 +60,7 @@
                             words=['Second', 'instance', '.'],
                             seq_len=3))
         dataset = DataSet(instances)
-        
+
 --------------------------------------
 2.DataSet与预处理
 --------------------------------------
@@ -143,7 +143,7 @@
         dataset.rename_field('a', 'b')
         #  DataSet的长度
         len(dataset)
-        
+
 --------------------------------------
 3.DataSet与自然语言处理(NLP)
 --------------------------------------
@@ -214,7 +214,7 @@
     置到不同的dict中，而还会对被设置为 `input` 或 `target` 的 field 进行类型检查。类型检查的目的是为了看能否把该 field 转为
     pytorch的 :class:`torch.LongTensor` 或 :class:`torch.FloatTensor` 类型
     (也可以在 :class:`~fastNLP.DataSetIter` 中设置输出numpy类型，参考 :class:`~fastNLP.DataSetIter` )。
-    
+
     如上例所示，fastNLP已将 `words` ，`chars` 和 `label` 转为了 :class:`Tensor` 类型。
     如果 field 在每个 `instance` 都拥有相同的维度(不能超过两维)，且最内层的元素都为相同的 type(int, float, np.int*, np.float*)，
     则fastNLP默认将对该 field 进行pad。也支持全为str的field作为target和input，这种情况下，fastNLP默认不进行pad。
@@ -222,7 +222,7 @@
     `instance` 对应的 field 必须要和前面已有的内容一致，否则会报错。
 
     可以查看field的dtype::
-        
+
         from fastNLP import DataSet
 
         d = DataSet({'a': [0, 1, 3], 'b':[[1.0, 2.0], [0.1, 0.2], [3]]})
@@ -238,7 +238,7 @@
     错误::
 
         from fastNLP import DataSet
-        
+
         d = DataSet({'data': [1, 'a']})
         d.set_input('data')
         >> RuntimeError: Mixed data types in Field data: [<class 'str'>, <class 'int'>]
@@ -283,9 +283,8 @@
 
 
 """
-__all__ = [
-    "DataSet"
-]
+
+__all__ = ["DataSet"]
 
 import _pickle as pickle
 from copy import deepcopy
@@ -311,7 +310,7 @@ class DataSet(object):
 
     def __init__(self, data=None):
         """
-        
+
         :param data: 如果为dict类型，则每个key的value应该为等长的list; 如果为list，
             每个元素应该为具有相同field的 :class:`~fastNLP.Instance` 。
         """
@@ -326,7 +325,9 @@ class DataSet(object):
                     self.add_field(field_name=key, fields=value)
             elif isinstance(data, list):
                 for ins in data:
-                    assert isinstance(ins, Instance), "Must be Instance type, not {}.".format(type(ins))
+                    assert isinstance(ins, Instance), (
+                        "Must be Instance type, not {}.".format(type(ins))
+                    )
                     self.append(ins)
 
             else:
@@ -349,9 +350,14 @@ class DataSet(object):
                 self.idx = idx
 
             def __getitem__(self, item):
-                assert item in self.dataset.field_arrays, "no such field:{} in Instance {}".format(item, self.dataset[
-                    self.idx])
-                assert self.idx < len(self.dataset.field_arrays[item]), "index:{} out of range".format(self.idx)
+                assert item in self.dataset.field_arrays, (
+                    "no such field:{} in Instance {}".format(
+                        item, self.dataset[self.idx]
+                    )
+                )
+                assert self.idx < len(self.dataset.field_arrays[item]), (
+                    "index:{} out of range".format(self.idx)
+                )
                 return self.dataset.field_arrays[item][self.idx]
 
             def __setitem__(self, key, value):
@@ -378,14 +384,26 @@ class DataSet(object):
                 If `idx` is slice, return a DataSet object.
         """
         if isinstance(idx, int):
-            return Instance(**{name: self.field_arrays[name][idx] for name in self.field_arrays})
+            return Instance(
+                **{name: self.field_arrays[name][idx] for name in self.field_arrays}
+            )
         elif isinstance(idx, slice):
-            if idx.start is not None and (idx.start >= len(self) or idx.start <= -len(self)):
-                raise RuntimeError(f"Start index {idx.start} out of range 0-{len(self) - 1}")
+            if idx.start is not None and (
+                idx.start >= len(self) or idx.start <= -len(self)
+            ):
+                raise RuntimeError(
+                    f"Start index {idx.start} out of range 0-{len(self) - 1}"
+                )
             data_set = DataSet()
             for field in self.field_arrays.values():
-                data_set.add_field(field_name=field.name, fields=field.content[idx], padder=field.padder,
-                                   is_input=field.is_input, is_target=field.is_target, ignore_type=field.ignore_type)
+                data_set.add_field(
+                    field_name=field.name,
+                    fields=field.content[idx],
+                    padder=field.padder,
+                    is_input=field.is_input,
+                    is_target=field.is_target,
+                    ignore_type=field.ignore_type,
+                )
             return data_set
         elif isinstance(idx, str):
             if idx not in self:
@@ -401,7 +419,9 @@ class DataSet(object):
                 dataset.field_arrays[field_name].to(field)
             return dataset
         else:
-            raise KeyError("Unrecognized type {} for idx in __getitem__ method".format(type(idx)))
+            raise KeyError(
+                "Unrecognized type {} for idx in __getitem__ method".format(type(idx))
+            )
 
     def __getattr__(self, item):
         # Not tested. Don't use !!
@@ -449,12 +469,12 @@ class DataSet(object):
         :param pad_value: 该field的pad的值，仅在该field为input或target时有意义
         :return:
         """
-        if len(self.field_arrays)>0:
-            field_names = ['field_names']
-            is_inputs = ['is_input']
-            is_targets = ['is_target']
-            pad_values = ['pad_value']
-            ignore_types = ['ignore_type']
+        if len(self.field_arrays) > 0:
+            field_names = ["field_names"]
+            is_inputs = ["is_input"]
+            is_targets = ["is_target"]
+            pad_values = ["pad_value"]
+            ignore_types = ["ignore_type"]
 
             for name, field_array in self.field_arrays.items():
                 field_names.append(name)
@@ -467,17 +487,19 @@ class DataSet(object):
                 else:
                     is_targets.append(False)
 
-                if (field_array.is_input or field_array.is_target) and field_array.padder is not None:
+                if (
+                    field_array.is_input or field_array.is_target
+                ) and field_array.padder is not None:
                     pad_values.append(field_array.padder.get_pad_val())
                 else:
-                    pad_values.append(' ')
+                    pad_values.append(" ")
 
                 if field_array._ignore_type:
                     ignore_types.append(True)
                 elif field_array.is_input or field_array.is_target:
                     ignore_types.append(False)
                 else:
-                    ignore_types.append(' ')
+                    ignore_types.append(" ")
             table = PrettyTable(field_names=field_names)
             fields = [is_inputs, is_targets, ignore_types, pad_values]
             for field in fields:
@@ -496,12 +518,16 @@ class DataSet(object):
             # DataSet has no field yet
             for name, field in instance.fields.items():
                 # field = field.tolist() if isinstance(field, np.ndarray) else field
-                self.field_arrays[name] = FieldArray(name, [field])  # 第一个样本，必须用list包装起来
+                self.field_arrays[name] = FieldArray(
+                    name, [field]
+                )  # 第一个样本，必须用list包装起来
         else:
             if len(self.field_arrays) != len(instance.fields):
                 raise ValueError(
-                    "DataSet object has {} fields, but attempt to append an Instance object with {} fields."
-                        .format(len(self.field_arrays), len(instance.fields)))
+                    "DataSet object has {} fields, but attempt to append an Instance object with {} fields.".format(
+                        len(self.field_arrays), len(instance.fields)
+                    )
+                )
             for name, field in instance.fields.items():
                 assert name in self.field_arrays
                 try:
@@ -521,14 +547,24 @@ class DataSet(object):
         if not isinstance(fieldarray, FieldArray):
             raise TypeError("Only fastNLP.FieldArray supported.")
         if len(self) != len(fieldarray):
-            raise RuntimeError(f"The field to add must have the same size as dataset. "
-                               f"Dataset size {len(self)} != field size {len(fieldarray)}")
+            raise RuntimeError(
+                f"The field to add must have the same size as dataset. "
+                f"Dataset size {len(self)} != field size {len(fieldarray)}"
+            )
         self.field_arrays[field_name] = fieldarray
 
-    def add_field(self, field_name, fields, padder=AutoPadder(), is_input=False, is_target=False, ignore_type=False):
+    def add_field(
+        self,
+        field_name,
+        fields,
+        padder=AutoPadder(),
+        is_input=False,
+        is_target=False,
+        ignore_type=False,
+    ):
         """
         新增一个field
-        
+
         :param str field_name: 新增的field的名称
         :param list fields: 需要新增的field的内容
         :param None,~fastNLP.Padder padder: 如果为None,则不进行pad，默认使用 :class:`~fastNLP.AutoPadder` 自动判断是否需要做pad。
@@ -539,10 +575,18 @@ class DataSet(object):
 
         if len(self.field_arrays) != 0:
             if len(self) != len(fields):
-                raise RuntimeError(f"The field to add must have the same size as dataset. "
-                                   f"Dataset size {len(self)} != field size {len(fields)}")
-        self.field_arrays[field_name] = FieldArray(field_name, fields, is_target=is_target, is_input=is_input,
-                                                   padder=padder, ignore_type=ignore_type)
+                raise RuntimeError(
+                    f"The field to add must have the same size as dataset. "
+                    f"Dataset size {len(self)} != field size {len(fields)}"
+                )
+        self.field_arrays[field_name] = FieldArray(
+            field_name,
+            fields,
+            is_target=is_target,
+            is_input=is_input,
+            padder=padder,
+            ignore_type=ignore_type,
+        )
 
     def delete_instance(self, index):
         """
@@ -552,7 +596,11 @@ class DataSet(object):
         """
         assert isinstance(index, int), "Only integer supported."
         if len(self) <= index:
-            raise IndexError("{} is too large for as DataSet with {} instances.".format(index, len(self)))
+            raise IndexError(
+                "{} is too large for as DataSet with {} instances.".format(
+                    index, len(self)
+                )
+            )
         if len(self) == 1:
             self.field_arrays.clear()
         else:
@@ -661,7 +709,9 @@ class DataSet(object):
         for name in field_names:
             if name in self.field_arrays:
                 try:
-                    self.field_arrays[name]._use_1st_ins_infer_dim_type = bool(use_1st_ins_infer_dim_type)
+                    self.field_arrays[name]._use_1st_ins_infer_dim_type = bool(
+                        use_1st_ins_infer_dim_type
+                    )
                     self.field_arrays[name].is_target = flag
                 except SetInputOrTargetException as e:
                     logger.error(f"Cannot set field:{name} as target.")
@@ -685,10 +735,14 @@ class DataSet(object):
         for name in field_names:
             if name in self.field_arrays:
                 try:
-                    self.field_arrays[name]._use_1st_ins_infer_dim_type = bool(use_1st_ins_infer_dim_type)
+                    self.field_arrays[name]._use_1st_ins_infer_dim_type = bool(
+                        use_1st_ins_infer_dim_type
+                    )
                     self.field_arrays[name].is_input = flag
                 except SetInputOrTargetException as e:
-                    logger.error(f"Cannot set field:{name} as input, exception happens at the {e.index} value.")
+                    logger.error(
+                        f"Cannot set field:{name} as input, exception happens at the {e.index} value."
+                    )
                     raise e
             else:
                 raise KeyError("{} is not a valid field name.".format(name))
@@ -783,10 +837,17 @@ class DataSet(object):
                 results.append(func(ins[field_name]))
         except Exception as e:
             if idx != -1:
-                logger.error("Exception happens at the `{}`th(from 1) instance.".format(idx + 1))
+                logger.error(
+                    "Exception happens at the `{}`th(from 1) instance.".format(idx + 1)
+                )
             raise e
-        if not (new_field_name is None) and len(list(filter(lambda x: x is not None, results))) == 0:  # all None
-            raise ValueError("{} always return None.".format(_get_func_signature(func=func)))
+        if (
+            not (new_field_name is None)
+            and len(list(filter(lambda x: x is not None, results))) == 0
+        ):  # all None
+            raise ValueError(
+                "{} always return None.".format(_get_func_signature(func=func))
+            )
 
         if new_field_name is not None:
             self._add_apply_field(results, new_field_name, kwargs)
@@ -803,27 +864,36 @@ class DataSet(object):
         :return:
         """
         extra_param = {}
-        if 'is_input' in kwargs:
-            extra_param['is_input'] = kwargs['is_input']
-        if 'is_target' in kwargs:
-            extra_param['is_target'] = kwargs['is_target']
-        if 'ignore_type' in kwargs:
-            extra_param['ignore_type'] = kwargs['ignore_type']
+        if "is_input" in kwargs:
+            extra_param["is_input"] = kwargs["is_input"]
+        if "is_target" in kwargs:
+            extra_param["is_target"] = kwargs["is_target"]
+        if "ignore_type" in kwargs:
+            extra_param["ignore_type"] = kwargs["ignore_type"]
         if new_field_name in self.field_arrays:
             # overwrite the field, keep same attributes
             old_field = self.field_arrays[new_field_name]
-            if 'is_input' not in extra_param:
-                extra_param['is_input'] = old_field.is_input
-            if 'is_target' not in extra_param:
-                extra_param['is_target'] = old_field.is_target
-            if 'ignore_type' not in extra_param:
-                extra_param['ignore_type'] = old_field.ignore_type
-            self.add_field(field_name=new_field_name, fields=results, is_input=extra_param["is_input"],
-                           is_target=extra_param["is_target"], ignore_type=extra_param['ignore_type'])
+            if "is_input" not in extra_param:
+                extra_param["is_input"] = old_field.is_input
+            if "is_target" not in extra_param:
+                extra_param["is_target"] = old_field.is_target
+            if "ignore_type" not in extra_param:
+                extra_param["ignore_type"] = old_field.ignore_type
+            self.add_field(
+                field_name=new_field_name,
+                fields=results,
+                is_input=extra_param["is_input"],
+                is_target=extra_param["is_target"],
+                ignore_type=extra_param["ignore_type"],
+            )
         else:
-            self.add_field(field_name=new_field_name, fields=results, is_input=extra_param.get("is_input", None),
-                           is_target=extra_param.get("is_target", None),
-                           ignore_type=extra_param.get("ignore_type", False))
+            self.add_field(
+                field_name=new_field_name,
+                fields=results,
+                is_input=extra_param.get("is_input", None),
+                is_target=extra_param.get("is_target", None),
+                ignore_type=extra_param.get("ignore_type", False),
+            )
 
     def apply(self, func, new_field_name=None, **kwargs):
         """
@@ -839,7 +909,7 @@ class DataSet(object):
             2. is_target: bool, 如果为True则将 `new_field_name` 的field设置为target
 
             3. ignore_type: bool, 如果为True则将 `new_field_name` 的field的ignore_type设置为true, 忽略其类型
-            
+
         :return List[Any]: 里面的元素为func的返回值，所以list长度为DataSet的长度
         """
         assert len(self) != 0, "Null DataSet cannot use apply()."
@@ -854,8 +924,13 @@ class DataSet(object):
             raise e
 
         # results = [func(ins) for ins in self._inner_iter()]
-        if not (new_field_name is None) and len(list(filter(lambda x: x is not None, results))) == 0:  # all None
-            raise ValueError("{} always return None.".format(_get_func_signature(func=func)))
+        if (
+            not (new_field_name is None)
+            and len(list(filter(lambda x: x is not None, results))) == 0
+        ):  # all None
+            raise ValueError(
+                "{} always return None.".format(_get_func_signature(func=func))
+            )
 
         if new_field_name is not None:
             self._add_apply_field(results, new_field_name, kwargs)
@@ -934,7 +1009,7 @@ class DataSet(object):
 
         :param str path: 将DataSet存在哪个路径
         """
-        with open(path, 'wb') as f:
+        with open(path, "wb") as f:
             pickle.dump(self, f)
 
     @staticmethod
@@ -945,7 +1020,9 @@ class DataSet(object):
         :param str path: 从哪里读取DataSet
         :return: 读取后的 :class:`~fastNLP.读取后的DataSet`。
         """
-        with open(path, 'rb') as f:
+        with open(path, "rb") as f:
             d = pickle.load(f)
-            assert isinstance(d, DataSet), "The object is not DataSet, but {}.".format(type(d))
+            assert isinstance(d, DataSet), "The object is not DataSet, but {}.".format(
+                type(d)
+            )
         return d

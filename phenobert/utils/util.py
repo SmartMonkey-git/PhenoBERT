@@ -10,7 +10,7 @@ from nltk.tokenize import PunktSentenceTokenizer, TreebankWordTokenizer
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 
-project_path = os.path.dirname(__file__)+"/"
+project_path = os.path.dirname(__file__) + "/"
 
 # file path definition
 hpo_json_path = project_path + "../data/hpo.json"
@@ -23,6 +23,7 @@ cnn_model_path = project_path + "../models/HPOModel_H/model_layer1.pkl"
 bert_model_path = project_path + "../models/bert_model_max_triple.pkl"
 device = torch.device("cuda:0" if torch.cuda.is_available() else torch.device("cpu"))
 wnl = WordNetLemmatizer()
+
 
 class HPO_class:
     """
@@ -70,16 +71,32 @@ class PhraseDataSet4trainCNN(Dataset):
         # data: [[word1, word2, ... in phrase], hpo_num_idx]
         phrase, sentence, hpo_num = self.data[idx]
         # [len(phrase), embedding_dim]
-        data = np.concatenate([self.fasttext_model.get_word_vector(word).reshape(1, -1) for word in phrase])
+        data = np.concatenate(
+            [
+                self.fasttext_model.get_word_vector(word).reshape(1, -1)
+                for word in phrase
+            ]
+        )
         pad_data = np.zeros(shape=(self.max_seq_len, data.shape[1]))
-        pad_data[:data.shape[0]] = data
+        pad_data[: data.shape[0]] = data
         seq_len = data.shape[0]
         # mask矩阵
         # mask = np.zeros((self.max_seq_len, self.expand_dim))
         # mask[data.shape[0]:]=np.ones_like(mask[data.shape[0]:])
-        l1_indexs = [self.hpo_tree.getHPO2idx_l1(i) for i in self.hpo_tree.getLayer1HPOByHPO(hpo_num)]
-        target = torch.zeros(self.num_class + 1).index_fill(0, torch.tensor(l1_indexs), torch.tensor(1).long())
-        sample = {"data": pad_data, "seq_len": seq_len, "target": target, "phrase": sentence, "hpo_num": hpo_num}
+        l1_indexs = [
+            self.hpo_tree.getHPO2idx_l1(i)
+            for i in self.hpo_tree.getLayer1HPOByHPO(hpo_num)
+        ]
+        target = torch.zeros(self.num_class + 1).index_fill(
+            0, torch.tensor(l1_indexs), torch.tensor(1).long()
+        )
+        sample = {
+            "data": pad_data,
+            "seq_len": seq_len,
+            "target": target,
+            "phrase": sentence,
+            "hpo_num": hpo_num,
+        }
         return sample
 
 
@@ -111,11 +128,21 @@ class PhraseDataSet4trainCNN_sub(Dataset):
         # data: [[word1, word2, ... in phrase], hpo_num_idx]
         phrase, hpo_num_idx, sentence = self.data[idx]
         # [len(phrase), embedding_dim]
-        data = np.concatenate([self.fasttext_model.get_word_vector(word).reshape(1, -1) for word in phrase])
+        data = np.concatenate(
+            [
+                self.fasttext_model.get_word_vector(word).reshape(1, -1)
+                for word in phrase
+            ]
+        )
         pad_data = np.zeros(shape=(self.max_seq_len, data.shape[1]))
-        pad_data[:data.shape[0]] = data
+        pad_data[: data.shape[0]] = data
         seq_len = data.shape[0]
-        sample = {"data": pad_data, "seq_len": seq_len, "target": hpo_num_idx, "phrase": sentence}
+        sample = {
+            "data": pad_data,
+            "seq_len": seq_len,
+            "target": hpo_num_idx,
+            "phrase": sentence,
+        }
         return sample
 
 
@@ -148,9 +175,14 @@ class PhraseDataSet4predict(Dataset):
     def __getitem__(self, idx):
         p_phrase = self.data[idx]
         # [len(phrase), embedding_dim]
-        data = np.concatenate([self.fasttext_model.get_word_vector(word).reshape(1, -1) for word in p_phrase])
+        data = np.concatenate(
+            [
+                self.fasttext_model.get_word_vector(word).reshape(1, -1)
+                for word in p_phrase
+            ]
+        )
         pad_data = np.zeros(shape=(self.max_seq_len, data.shape[1]))
-        pad_data[:data.shape[0]] = data
+        pad_data[: data.shape[0]] = data
         seq_len = data.shape[0]
         sample = {"data": pad_data, "seq_len": seq_len}
         return sample
@@ -172,9 +204,11 @@ def PhraseDataSet4predictFunc(phrase_item, fasttext_model, max_seq_len=30):
         p_phrase = ""
     if len(p_phrase) == 0:
         return None
-    data = np.concatenate([fasttext_model.get_word_vector(word).reshape(1, -1) for word in p_phrase])
+    data = np.concatenate(
+        [fasttext_model.get_word_vector(word).reshape(1, -1) for word in p_phrase]
+    )
     pad_data = np.zeros(shape=(max_seq_len, data.shape[1]))
-    pad_data[:data.shape[0]] = data
+    pad_data[: data.shape[0]] = data
     return [torch.tensor(pad_data).unsqueeze(0).float().to(device), None]
 
 
@@ -205,12 +239,15 @@ class WordItem:
     """
     英文单词的包装类
     """
+
     # 用于lemmatize
     lemma_dict = {}
+
     def __init__(self, text, start, end):
         self.text = text.lower()
         self.start = start
         self.end = end
+
 
 def getNum2Word(file_path):
     Num2Word = {}
@@ -219,6 +256,7 @@ def getNum2Word(file_path):
             inter = line.strip().split("\t")
             Num2Word[inter[0]] = inter[1]
     return Num2Word
+
 
 class PhraseItem:
     """
@@ -237,7 +275,6 @@ class PhraseItem:
         self.end_loc = self.word_items[-1].end
         self.no_flag = False
 
-
     def simplify(self):
         """
         对phrase_item进行简化，去除常用词以及替换数字
@@ -245,12 +282,17 @@ class PhraseItem:
         """
         for word_item in self.word_items:
             if word_item.text in PhraseItem.Num2Word:
-                self.simple_items.append(WordItem(PhraseItem.Num2Word[word_item.text], word_item.start, word_item.end))
+                self.simple_items.append(
+                    WordItem(
+                        PhraseItem.Num2Word[word_item.text],
+                        word_item.start,
+                        word_item.end,
+                    )
+                )
             elif word_item.text in PhraseItem.StopWords or isNum(word_item.text):
                 continue
             else:
                 self.simple_items.append(word_item)
-
 
     def toString(self):
         return " ".join([i.text for i in self.word_items])
@@ -259,7 +301,9 @@ class PhraseItem:
         return " ".join([i.text for i in self.simple_items])
 
     def include(self, phrase_item):
-        if self.locs_set.issubset(phrase_item.locs_set) or self.locs_set.issuperset(phrase_item.locs_set):
+        if self.locs_set.issubset(phrase_item.locs_set) or self.locs_set.issuperset(
+            phrase_item.locs_set
+        ):
             return True
         return False
 
@@ -413,7 +457,12 @@ class HPOTree:
         :return:
         """
         p_phrase = " ".join(sorted(processStr(phrase)))
-        p_l_phrase = " ".join([WordItem.lemma_dict[i] if i in WordItem.lemma_dict else i for i in p_phrase.split()])
+        p_l_phrase = " ".join(
+            [
+                WordItem.lemma_dict[i] if i in WordItem.lemma_dict else i
+                for i in p_phrase.split()
+            ]
+        )
         if p_phrase in self.p_phrase2HPO:
             return self.p_phrase2HPO[p_phrase]
         elif p_l_phrase in self.p_phrase2HPO:
@@ -461,14 +510,16 @@ class HPOTree:
         idx2hpo = {hpo2idx[hpo]: hpo for hpo in hpo2idx}
         return root_idx, hpo_list, n_concept, hpo2idx, idx2hpo
 
-
     def getNodeSimilarityByID(self, hpoNum1, hpoNum2):
         """
         计算hpoNum1和hpoNum2的节点相似性，基于edge和information content
         默认采用基于edge的方式
         """
         # Use phenotypic abnomality only; ensure score >= 0.0
-        if hpoNum1 not in self.phenotypic_abnormality or hpoNum2 not in self.phenotypic_abnormality:
+        if (
+            hpoNum1 not in self.phenotypic_abnormality
+            or hpoNum2 not in self.phenotypic_abnormality
+        ):
             return 0.0
         if hpoNum1 == self.root and hpoNum2 == self.root:
             return 1.0
@@ -484,9 +535,15 @@ class HPOTree:
         father2 = struct2.father
         father2.add(hpoNum2)
         ancestor = father1 & father2
-        LCS = \
-            sorted([[a, self.depth_dict[a]] for a in ancestor if a in self.phenotypic_abnormality], key=lambda x: x[1],
-                   reverse=True)[0][0]
+        LCS = sorted(
+            [
+                [a, self.depth_dict[a]]
+                for a in ancestor
+                if a in self.phenotypic_abnormality
+            ],
+            key=lambda x: x[1],
+            reverse=True,
+        )[0][0]
         depth3 = self.depth_dict[LCS]
         struct3 = HPO_class(self.data[LCS])
         # Edge-based score
@@ -499,7 +556,6 @@ class HPOTree:
         # pc3=(len(struct3.child)+1)/len(self.phenotypic_abnormality)
         # ib_score = 2*math.log2(pc3)/(math.log2(pc1)+math.log2(pc2))
         # return ib_score
-
 
     def getHPO_set_similarity_max(self, hpo_set1, hpo_set2):
         """
@@ -536,42 +592,64 @@ class HPOTree:
 
         return 1 - ((part1 + part2) / len(hpo_set1 | hpo_set2))
 
-
     def getAdjacentMatrixAncestors(self, root_l1, num_nodes):
         """
         产生考虑所有祖先节点的邻接矩阵
         self.getAdjacentMatrixAncestorsAssist为辅助函数
         """
         import scipy.sparse as ss
+
         root_idx, hpo_list, n_concept, hpo2idx, idx2hpo = self.getMaterial4L1(root_l1)
         ancestors_weight = {}
         for hpo_num in hpo_list:
             concept_id = hpo2idx[hpo_num]
-            self.getAdjacentMatrixAncestorsAssist(ancestors_weight, concept_id, hpo2idx, idx2hpo)
+            self.getAdjacentMatrixAncestorsAssist(
+                ancestors_weight, concept_id, hpo2idx, idx2hpo
+            )
         sparse_indexes = []
         sparse_values = []
         for concept_id in ancestors_weight:
-            sparse_indexes.extend([[concept_id, ancestor_id] for ancestor_id in ancestors_weight[concept_id]])
-            sparse_values.extend([ancestors_weight[concept_id][ancestor_id]
-                                  for ancestor_id in ancestors_weight[concept_id]])
+            sparse_indexes.extend(
+                [
+                    [concept_id, ancestor_id]
+                    for ancestor_id in ancestors_weight[concept_id]
+                ]
+            )
+            sparse_values.extend(
+                [
+                    ancestors_weight[concept_id][ancestor_id]
+                    for ancestor_id in ancestors_weight[concept_id]
+                ]
+            )
 
         indices = np.array(sparse_indexes)
-        A = ss.coo_matrix((np.array(sparse_values), (indices[:, 0], indices[:, 1])),
-                          shape=(num_nodes, num_nodes), dtype=np.float)
+        A = ss.coo_matrix(
+            (np.array(sparse_values), (indices[:, 0], indices[:, 1])),
+            shape=(num_nodes, num_nodes),
+            dtype=np.float,
+        )
         return A.tocoo()
 
-    def getAdjacentMatrixAncestorsAssist(self, ancestors_weight, concept_id, hpo2idx, idx2hpo):
+    def getAdjacentMatrixAncestorsAssist(
+        self, ancestors_weight, concept_id, hpo2idx, idx2hpo
+    ):
         if concept_id in ancestors_weight:
             return ancestors_weight[concept_id].keys()
         ancestors_weight[concept_id] = {concept_id: 1.0}
-        fathers = [i for i in HPO_class(self.data[idx2hpo[concept_id]]).is_a if i in hpo2idx]
+        fathers = [
+            i for i in HPO_class(self.data[idx2hpo[concept_id]]).is_a if i in hpo2idx
+        ]
         for father_hpo_num in fathers:
             father_id = hpo2idx[father_hpo_num]
-            ancestors = self.getAdjacentMatrixAncestorsAssist(ancestors_weight, father_id, hpo2idx, idx2hpo)
+            ancestors = self.getAdjacentMatrixAncestorsAssist(
+                ancestors_weight, father_id, hpo2idx, idx2hpo
+            )
             for ancestor_id in ancestors:
                 if ancestor_id not in ancestors_weight[concept_id]:
                     ancestors_weight[concept_id][ancestor_id] = 0.0
-                ancestors_weight[concept_id][ancestor_id] += ancestors_weight[father_id][ancestor_id] / len(fathers)
+                ancestors_weight[concept_id][ancestor_id] += ancestors_weight[
+                    father_id
+                ][ancestor_id] / len(fathers)
         return ancestors_weight[concept_id].keys()
 
 
@@ -626,7 +704,7 @@ class ModelLoader:
     def load_all(self, model_save_path):
         if torch.cuda.is_available():
             return torch.load(model_save_path)
-        return torch.load(model_save_path, map_location=torch.device('cpu'))
+        return torch.load(model_save_path, map_location=torch.device("cpu"))
 
 
 class EarlyStopping:
@@ -635,7 +713,7 @@ class EarlyStopping:
     Change from  https://github.com/Bjarten/early-stopping-pytorch/blob/master/pytorchtools.py
     """
 
-    def __init__(self, patience=7, verbose=False, delta=0, path='checkpoint.pt'):
+    def __init__(self, patience=7, verbose=False, delta=0, path="checkpoint.pt"):
         """
         Args:
             patience (int): How long to wait after last time validation loss improved.
@@ -664,7 +742,7 @@ class EarlyStopping:
             self.save_checkpoint(score, model)
         elif score < self.best_score + self.delta:
             self.counter += 1
-            print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
+            print(f"EarlyStopping counter: {self.counter} out of {self.patience}")
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
@@ -677,7 +755,9 @@ class EarlyStopping:
         Saves model when validation loss decrease.
         """
         if self.verbose:
-            print(f'Validation loss decreased ({self.best_score:.4f} --> {score:.4f}).  Saving model ...')
+            print(
+                f"Validation loss decreased ({self.best_score:.4f} --> {score:.4f}).  Saving model ..."
+            )
         torch.save(model, self.path)
 
 
@@ -701,8 +781,9 @@ def strip_accents(s):
     :param s:
     :return:
     """
-    return ''.join(c for c in unicodedata.normalize('NFD', s)
-                   if unicodedata.category(c) != 'Mn')
+    return "".join(
+        c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn"
+    )
 
 
 def processStr(string):
@@ -713,7 +794,7 @@ def processStr(string):
     """
     string = re.sub("(?<=[A-Z])-(?=[\d])", "", string)  # 统一类型表述
     string = strip_accents(string.lower())
-    string = re.sub("[-_\"\'\\\\\t\r\n‘’]", " ", string)
+    string = re.sub("[-_\"'\\\\\t\r\n‘’]", " ", string)
     all_text = string.strip().split()
     return all_text
 
@@ -760,13 +841,32 @@ def getSpliters():
     用于分割短句的分割词
     :return:
     """
-    spliters = set([word for word, pos in nltk.pos_tag(stopwords.words('english')) if pos in {'CC', 'WP', 'TO', 'WDT'}]+[',', '.', ':', ';', '(', ')', '[', ']', '/'])
+    spliters = set(
+        [
+            word
+            for word, pos in nltk.pos_tag(stopwords.words("english"))
+            if pos in {"CC", "WP", "TO", "WDT"}
+        ]
+        + [",", ".", ":", ";", "(", ")", "[", "]", "/"]
+    )
     return spliters
 
 
 def getNegativeWords():
-    negatives = {"no", "not", "none", "negative", "non", "never", "few", "lower", "fewer", "less", "barely",
-                           "normal"}
+    negatives = {
+        "no",
+        "not",
+        "none",
+        "negative",
+        "non",
+        "never",
+        "few",
+        "lower",
+        "fewer",
+        "less",
+        "barely",
+        "normal",
+    }
     return negatives
 
 
@@ -783,11 +883,14 @@ def produceCandidateTriple(Candidate_hpos_sub_total, model, threshold):
     from fastNLP import DataSet
     from fastNLP import DataSetIter
     from my_bert_match import addWordPiece, addSeqlen, addWords, processItem, processNum
+
     p_Candidate_phrases = []
     phrase_nums_per_hpo = []
     Candidate_hpos = []
     for raw_phrase, Candidate_phrase, Candidate_hpos_sub in Candidate_hpos_sub_total:
-        p_Candidate_phrases.extend([raw_phrase + "::" + item for item in Candidate_phrase])
+        p_Candidate_phrases.extend(
+            [raw_phrase + "::" + item for item in Candidate_phrase]
+        )
         phrase_nums_per_hpo.append(len(Candidate_phrase))
         Candidate_hpos.append(Candidate_hpos_sub)
     Candidate_dataset = DataSet({"raw_words": p_Candidate_phrases})
@@ -804,7 +907,11 @@ def produceCandidateTriple(Candidate_hpos_sub_total, model, threshold):
     outputs = []
     for batch_x, batch_y in test_batch:
         _move_dict_value_to_device(batch_x, batch_y, device=_get_model_device(model))
-        outputs.append(model.forward(batch_x["word_pieces"], batch_x["word_nums"], batch_x["seq_len"])['pred'])
+        outputs.append(
+            model.forward(
+                batch_x["word_pieces"], batch_x["word_nums"], batch_x["seq_len"]
+            )["pred"]
+        )
     outputs = torch.cat(outputs)
     outputs = torch.nn.functional.softmax(outputs, dim=1).cpu().detach().numpy()
     # print(outputs.size)
@@ -816,23 +923,30 @@ def produceCandidateTriple(Candidate_hpos_sub_total, model, threshold):
     index = 0
     ans = []
     for group_num in phrase_nums_per_hpo:
-        g_results_2 = results_2[index:index+group_num]
-        g_results_1 = results_1[index:index+group_num]
+        g_results_2 = results_2[index : index + group_num]
+        g_results_1 = results_1[index : index + group_num]
         Candidate_hpos_sub = Candidate_hpos[count]
         index += group_num
         count += 1
         # 如果这里已经能找到精确匹配的就直接输出
         if max(g_results_2) >= threshold:
-            ans.append([Candidate_hpos_sub[int(np.argmax(g_results_2))], max(g_results_2), "2"])
+            ans.append(
+                [Candidate_hpos_sub[int(np.argmax(g_results_2))], max(g_results_2), "2"]
+            )
             continue
         # 找近似关系
         if max(g_results_1) >= threshold:
-            ans.append([Candidate_hpos_sub[int(np.argmax(g_results_1))], max(g_results_1), "1"])
+            ans.append(
+                [Candidate_hpos_sub[int(np.argmax(g_results_1))], max(g_results_1), "1"]
+            )
             continue
         ans.append(["None", None, "0"])
     return ans
 
-def produceCandidateTripleSlow(raw_phrase, Candidate_phrases, model, Candidate_hpos_sub, threshold):
+
+def produceCandidateTripleSlow(
+    raw_phrase, Candidate_phrases, model, Candidate_hpos_sub, threshold
+):
     """
     使用BERT判断Candidate_phrases中哪个与raw_phrase语义最接近；基于最大值方式；适用于单个处理
     """
@@ -841,6 +955,7 @@ def produceCandidateTripleSlow(raw_phrase, Candidate_phrases, model, Candidate_h
     from fastNLP import DataSet
     from fastNLP import DataSetIter
     from my_bert_match import addWordPiece, addSeqlen, addWords, processItem, processNum
+
     p_Candidate_phrases = [raw_phrase + "::" + item for item in Candidate_phrases]
     Candidate_dataset = DataSet({"raw_words": p_Candidate_phrases})
     Candidate_dataset.apply(addWords, new_field_name="p_words")
@@ -856,7 +971,11 @@ def produceCandidateTripleSlow(raw_phrase, Candidate_phrases, model, Candidate_h
     outputs = []
     for batch_x, batch_y in test_batch:
         _move_dict_value_to_device(batch_x, batch_y, device=_get_model_device(model))
-        outputs.append(model.forward(batch_x["word_pieces"], batch_x["word_nums"], batch_x["seq_len"])['pred'])
+        outputs.append(
+            model.forward(
+                batch_x["word_pieces"], batch_x["word_nums"], batch_x["seq_len"]
+            )["pred"]
+        )
     outputs = torch.cat(outputs)
     outputs = torch.nn.functional.softmax(outputs, dim=1).cpu().detach().numpy()
 
@@ -872,6 +991,7 @@ def produceCandidateTripleSlow(raw_phrase, Candidate_phrases, model, Candidate_h
 
     return "None", None, "0"
 
+
 def process_text2phrases(text, clinical_ner_model):
     """
     用于从文本中提取Clinical Text Segments
@@ -884,7 +1004,7 @@ def process_text2phrases(text, clinical_ner_model):
     stopwords = getStopWords()
     # 将文本处理成正常的小写形式
     text = strip_accents(text.lower())
-    text = re.sub("[-_\"\'\\\\\t‘’]", " ", text)
+    text = re.sub("[-_\"'\\\\\t‘’]", " ", text)
     # 对于换行符替换为句号，后续作为分割词
     text = re.sub("(?<=[\w])[\r\n]", ".", text)
 
@@ -899,8 +1019,21 @@ def process_text2phrases(text, clinical_ner_model):
         curSentence = []
         tmp = set()
         for i in range(len(clinical_tokens)):
-            wi = WordItem(clinical_tokens[i].text, clinical_tokens[i].start_char, clinical_tokens[i].end_char)
-            if "PROBLEM" in clinical_tokens[i].ner and wi.text not in {',', '.', ':', ';', '(', ')', '[', ']'}:
+            wi = WordItem(
+                clinical_tokens[i].text,
+                clinical_tokens[i].start_char,
+                clinical_tokens[i].end_char,
+            )
+            if "PROBLEM" in clinical_tokens[i].ner and wi.text not in {
+                ",",
+                ".",
+                ":",
+                ";",
+                "(",
+                ")",
+                "[",
+                "]",
+            }:
                 curSentence.append(wi)
             else:
                 if len(curSentence) > 0:
@@ -922,7 +1055,11 @@ def process_text2phrases(text, clinical_ner_model):
             continue
         curSentence = []
         for i in range(len(clinical_tokens)):
-            wi = WordItem(clinical_tokens[i].text, clinical_tokens[i].start_char, clinical_tokens[i].end_char)
+            wi = WordItem(
+                clinical_tokens[i].text,
+                clinical_tokens[i].start_char,
+                clinical_tokens[i].end_char,
+            )
             # 用于后续lemma比对
             text_lemma = wnl.lemmatize(clinical_tokens[i].text)
             if clinical_tokens[i].text not in WordItem.lemma_dict:
@@ -946,8 +1083,19 @@ def process_text2phrases(text, clinical_ner_model):
     for phrase_item in sub_sentences:
         flag = False
         for token in phrase_item.word_items:
-            if token.text.lower() in {"no", "not", "none", "negative", "non", "never", "few", "lower", "fewer", "less",
-                                      "normal"}:
+            if token.text.lower() in {
+                "no",
+                "not",
+                "none",
+                "negative",
+                "non",
+                "never",
+                "few",
+                "lower",
+                "fewer",
+                "less",
+                "normal",
+            }:
                 flag = True
                 break
         if flag:
@@ -957,13 +1105,15 @@ def process_text2phrases(text, clinical_ner_model):
     sub_sentences_ = []
     for idx, pi in enumerate(sub_sentences):
         # 将含有and, or, / 的短句用tokenize进行拆分
-        sub_locs = [[i + pi.start_loc, j + pi.start_loc] for i, j in
-                    tokenizer.tokenize(text[pi.start_loc:pi.end_loc])]
+        sub_locs = [
+            [i + pi.start_loc, j + pi.start_loc]
+            for i, j in tokenizer.tokenize(text[pi.start_loc : pi.end_loc])
+        ]
         sub_phrases = []
         curr_phrase = []
         # 把以and, or, / 分割的短语提出
         for loc in sub_locs:
-            wi = WordItem(text[loc[0]:loc[1]], loc[0], loc[1])
+            wi = WordItem(text[loc[0] : loc[1]], loc[0], loc[1])
             if wi.text in {"and", "or", "/"}:
                 if len(curr_phrase) > 0:
                     sub_phrases.append(PhraseItem(curr_phrase))
@@ -1006,11 +1156,11 @@ def process_text2phrases(text, clinical_ner_model):
             for j in range(10):
                 if i + j == len(pi.simple_items):
                     break
-                if len(pi.simple_items[i:i + j + 1]) == 1:
-                    tmp_str = pi.simple_items[i:i + j + 1][0].text
+                if len(pi.simple_items[i : i + j + 1]) == 1:
+                    tmp_str = pi.simple_items[i : i + j + 1][0].text
                     if tmp_str in stopwords or isNum(tmp_str):
                         continue
-                phrases_list.append(PhraseItem(pi.simple_items[i:i + j + 1]))
+                phrases_list.append(PhraseItem(pi.simple_items[i : i + j + 1]))
                 phrases_list[-1].no_flag = pi.no_flag
 
     # print(len(phrases_list))
@@ -1018,8 +1168,21 @@ def process_text2phrases(text, clinical_ner_model):
     return phrases_list
 
 
-def annotate_phrases(text, phrases_list, hpo_tree, fasttext_model, cnn_model, bert_model,
-                     output_file_path, device, param1, param2, param3, use_longest, use_step_3):
+def annotate_phrases(
+    text,
+    phrases_list,
+    hpo_tree,
+    fasttext_model,
+    cnn_model,
+    bert_model,
+    output_file_path,
+    device,
+    param1,
+    param2,
+    param3,
+    use_longest,
+    use_step_3,
+):
     """
     注释一段文字
     :param text: 自由文本
@@ -1047,7 +1210,9 @@ def annotate_phrases(text, phrases_list, hpo_tree, fasttext_model, cnn_model, be
 
         # Step 1: 字典对应；对于一个短语对应多个的情况我们给出任意一个
         d_match = hpo_tree.matchPhrase2HPO(raw_phrase)
-        if d_match != "" and d_match in hpo_tree.phenotypic_abnormalityNT:  # 注意这里由于HPO版本不同，可能d_match!=tag
+        if (
+            d_match != "" and d_match in hpo_tree.phenotypic_abnormalityNT
+        ):  # 注意这里由于HPO版本不同，可能d_match!=tag
             # print(phrase_item.toString(), d_match)
             result_list.append([phrase_item, d_match, 1.0])
         else:
@@ -1072,7 +1237,9 @@ def annotate_phrases(text, phrases_list, hpo_tree, fasttext_model, cnn_model, be
     total_l1_root = hpo_tree.layer1
     for sub_l1_root in total_l1_root:
         # get idx2hpo hpo2idx for given HPO
-        root_idx, hpo_list, n_concept, hpo2idx, idx2hpo = hpo_tree.getMaterial4L1(sub_l1_root)
+        root_idx, hpo_list, n_concept, hpo2idx, idx2hpo = hpo_tree.getMaterial4L1(
+            sub_l1_root
+        )
         total_hpo_list.append(hpo_list)
         total_hpo2idx.append(hpo2idx)
         total_idx2hpo.append(idx2hpo)
@@ -1090,44 +1257,76 @@ def annotate_phrases(text, phrases_list, hpo_tree, fasttext_model, cnn_model, be
 
         for data in dataloader:
             # CNN input
-            input_data = [data["data"].float().to(device), data["seq_len"].int().to(device)]
+            input_data = [
+                data["data"].float().to(device),
+                data["seq_len"].int().to(device),
+            ]
             batch_num = input_data[0].size(0)
             y = cnn_model(input_data)
-            phrase_items = dataset.phrase_list[samples:samples + batch_num]
+            phrase_items = dataset.phrase_list[samples : samples + batch_num]
             samples += batch_num
 
             # Step 2: 基于显著性的Concept Generation
 
             if not use_step_3:
-
                 # 按升序排序
                 prediction = y.argsort().tolist()
                 scores_p = y.sort()[0] >= param1
                 Candidate_hpos = [
-                    set([hpo_tree.getIdx2HPO_l1(prediction[idx1][idx2]) for idx2 in range(len(prediction[idx1])) if
-                         scores_p[idx1][idx2]]) for idx1 in range(len(prediction))]
+                    set(
+                        [
+                            hpo_tree.getIdx2HPO_l1(prediction[idx1][idx2])
+                            for idx2 in range(len(prediction[idx1]))
+                            if scores_p[idx1][idx2]
+                        ]
+                    )
+                    for idx1 in range(len(prediction))
+                ]
                 for i, j in zip(phrase_items, Candidate_hpos):
                     if len(j) > 0 and "None" not in j:
                         Candidate_hpos_sub = []
                         for l1_hpo in j:
                             l1_idx = hpo_tree.getHPO2idx_l1(l1_hpo)
-                            y_sub = total_model[l1_idx](PhraseDataSet4predictFunc(i, fasttext_model)).squeeze()
+                            y_sub = total_model[l1_idx](
+                                PhraseDataSet4predictFunc(i, fasttext_model)
+                            ).squeeze()
                             prediction_sub = y_sub.topk(5)[1].tolist()
-                            scores_p_sub = torch.softmax(y_sub, dim=0).topk(5)[0].tolist()
+                            scores_p_sub = (
+                                torch.softmax(y_sub, dim=0).topk(5)[0].tolist()
+                            )
                             Candidate_hpos_sub.extend(
-                                [[total_idx2hpo[l1_idx][prediction_sub[idx]], scores_p_sub[idx]] for idx in
-                                 range(len(prediction_sub)) if scores_p_sub[idx] >= param2])
+                                [
+                                    [
+                                        total_idx2hpo[l1_idx][prediction_sub[idx]],
+                                        scores_p_sub[idx],
+                                    ]
+                                    for idx in range(len(prediction_sub))
+                                    if scores_p_sub[idx] >= param2
+                                ]
+                            )
                         Candidate_hpos_sub.sort(key=lambda x: x[1], reverse=True)
-                        if len(Candidate_hpos_sub) != 0 and Candidate_hpos_sub[0][0] != "None":
-                            result_list.append([i, Candidate_hpos_sub[0][0], Candidate_hpos_sub[0][1]])
+                        if (
+                            len(Candidate_hpos_sub) != 0
+                            and Candidate_hpos_sub[0][0] != "None"
+                        ):
+                            result_list.append(
+                                [i, Candidate_hpos_sub[0][0], Candidate_hpos_sub[0][1]]
+                            )
             else:
                 # 按升序排序
                 prediction = y.argsort().tolist()
                 scores_p = y.sort()[0]
                 # 挑选每个短语超过阈值的L1层的HPO，超过0.8的我们才认为是预测正确的L1层
                 Candidate_hpos = [
-                    set([hpo_tree.getIdx2HPO_l1(prediction[idx1][idx2]) for idx2 in range(len(prediction[idx1])) if
-                         scores_p[idx1][idx2] >= param1]) for idx1 in range(len(prediction))]
+                    set(
+                        [
+                            hpo_tree.getIdx2HPO_l1(prediction[idx1][idx2])
+                            for idx2 in range(len(prediction[idx1]))
+                            if scores_p[idx1][idx2] >= param1
+                        ]
+                    )
+                    for idx1 in range(len(prediction))
+                ]
 
                 Candidate_hpos_sub_total = []
                 next_phrase_items = []
@@ -1138,16 +1337,27 @@ def annotate_phrases(text, phrases_list, hpo_tree, fasttext_model, cnn_model, be
                         for l1_hpo in j:
                             l1_idx = hpo_tree.getHPO2idx_l1(l1_hpo)
                             y_sub = total_model[l1_idx](
-                                PhraseDataSet4predictFunc(phrase_item, fasttext_model)).squeeze()
+                                PhraseDataSet4predictFunc(phrase_item, fasttext_model)
+                            ).squeeze()
                             if y_sub.size(0) > 10:
                                 prediction_sub = y_sub.topk(10)[1].tolist()
-                                scores_p_sub = torch.softmax(y_sub, dim=0).topk(10)[0].tolist()
+                                scores_p_sub = (
+                                    torch.softmax(y_sub, dim=0).topk(10)[0].tolist()
+                                )
                             else:
                                 prediction_sub = y_sub.topk(y_sub.size(0))[1].tolist()
-                                scores_p_sub = torch.softmax(y_sub, dim=0).topk(y_sub.size(0))[0].tolist()
+                                scores_p_sub = (
+                                    torch.softmax(y_sub, dim=0)
+                                    .topk(y_sub.size(0))[0]
+                                    .tolist()
+                                )
                             Candidate_hpos_sub.update(
-                                [total_idx2hpo[l1_idx][prediction_sub[idx]] for idx in range(len(prediction_sub)) if
-                                 scores_p_sub[idx] >= param2])
+                                [
+                                    total_idx2hpo[l1_idx][prediction_sub[idx]]
+                                    for idx in range(len(prediction_sub))
+                                    if scores_p_sub[idx] >= param2
+                                ]
+                            )
 
                             # for idx in range(len(prediction_sub)):
                             #     print(phrase_item.toString(), total_idx2hpo[l1_idx][prediction_sub[idx]], scores_p_sub[idx])
@@ -1155,15 +1365,25 @@ def annotate_phrases(text, phrases_list, hpo_tree, fasttext_model, cnn_model, be
                         # print(phrase_item.toString(), Candidate_hpos_sub)
 
                         # Step 3: 基于BERT语义模型进行假阳性过滤
-                        if len(Candidate_hpos_sub) != 0 and "None" not in Candidate_hpos_sub:
+                        if (
+                            len(Candidate_hpos_sub) != 0
+                            and "None" not in Candidate_hpos_sub
+                        ):
                             Candidate_hpos_sub = list(Candidate_hpos_sub)
-                            candidate_phrase = [hpo_tree.getNameByHPO(item) for item in Candidate_hpos_sub]
+                            candidate_phrase = [
+                                hpo_tree.getNameByHPO(item)
+                                for item in Candidate_hpos_sub
+                            ]
                             raw_phrase = phrase_item.toString()
                             # print(raw_phrase, candidate_phrase)
-                            Candidate_hpos_sub_total.append([raw_phrase, candidate_phrase, Candidate_hpos_sub])
+                            Candidate_hpos_sub_total.append(
+                                [raw_phrase, candidate_phrase, Candidate_hpos_sub]
+                            )
                             next_phrase_items.append(phrase_item)
                 if len(Candidate_hpos_sub_total) > 0:
-                    ans = produceCandidateTriple(Candidate_hpos_sub_total, bert_model, param3)
+                    ans = produceCandidateTriple(
+                        Candidate_hpos_sub_total, bert_model, param3
+                    )
                     for sub_ans, phrase_item in zip(ans, next_phrase_items):
                         if sub_ans[0] != "None":
                             result_list.append([phrase_item, sub_ans[0], sub_ans[1]])
@@ -1190,23 +1410,31 @@ def annotate_phrases(text, phrases_list, hpo_tree, fasttext_model, cnn_model, be
                             else:
                                 idx_to_remove.add(idx2)
 
-        result_list = sorted([result_list[idx] for idx in range(len(result_list)) if idx not in idx_to_remove],
-                             key=lambda x: x[0].start_loc)
-		
-		# 输出结果
+        result_list = sorted(
+            [
+                result_list[idx]
+                for idx in range(len(result_list))
+                if idx not in idx_to_remove
+            ],
+            key=lambda x: x[0].start_loc,
+        )
+
+        # 输出结果
         for item in result_list:
             if not item[0].no_flag:
                 if output_file_path is not None:
                     output_file.write(
-                        f"{item[0].start_loc}\t{item[0].end_loc}\t{text[item[0].start_loc:item[0].end_loc]}\t{item[1]}\t{'%.2f' % (item[2])}\n")
+                        f"{item[0].start_loc}\t{item[0].end_loc}\t{text[item[0].start_loc : item[0].end_loc]}\t{item[1]}\t{'%.2f' % (item[2])}\n"
+                    )
                 else:
-                    output_file += f"{item[0].start_loc}\t{item[0].end_loc}\t{text[item[0].start_loc:item[0].end_loc]}\t{item[1]}\t{'%.2f' % (item[2])}\n"
+                    output_file += f"{item[0].start_loc}\t{item[0].end_loc}\t{text[item[0].start_loc : item[0].end_loc]}\t{item[1]}\t{'%.2f' % (item[2])}\n"
             else:
                 if output_file_path is not None:
                     output_file.write(
-                        f"{item[0].start_loc}\t{item[0].end_loc}\t{text[item[0].start_loc:item[0].end_loc]}\t{item[1]}\t{'%.2f' % (item[2])}\tNeg\n")
+                        f"{item[0].start_loc}\t{item[0].end_loc}\t{text[item[0].start_loc : item[0].end_loc]}\t{item[1]}\t{'%.2f' % (item[2])}\tNeg\n"
+                    )
                 else:
-                    output_file += f"{item[0].start_loc}\t{item[0].end_loc}\t{text[item[0].start_loc:item[0].end_loc]}\t{item[1]}\t{'%.2f' % (item[2])}\tNeg\n"
+                    output_file += f"{item[0].start_loc}\t{item[0].end_loc}\t{text[item[0].start_loc : item[0].end_loc]}\t{item[1]}\t{'%.2f' % (item[2])}\tNeg\n"
 
         if output_file_path is not None:
             output_file.close()

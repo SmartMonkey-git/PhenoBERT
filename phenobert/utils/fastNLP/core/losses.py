@@ -2,19 +2,16 @@
 losses 模块定义了 fastNLP 中所需的各种损失函数，一般做为 :class:`~fastNLP.Trainer` 的参数使用。
 
 """
+
 __all__ = [
     "LossBase",
-    
     "LossFunc",
     "LossInForward",
-    
     "CrossEntropyLoss",
     "BCELoss",
     "L1Loss",
     "NLLLoss",
-
-    "CMRC2018Loss"
-
+    "CMRC2018Loss",
 ]
 
 import inspect
@@ -37,7 +34,7 @@ class LossBase(object):
     """
     所有loss的基类。如果想了解其中的原理，请查看源码。
     """
-    
+
     def __init__(self):
         self._param_map = {}  # key是fun的参数，value是以该值从传入的dict取出value
         self._checked = False
@@ -46,14 +43,14 @@ class LossBase(object):
     def param_map(self):
         if len(self._param_map) == 0:  # 如果为空说明还没有初始化
             func_spect = inspect.getfullargspec(self.get_loss)
-            func_args = [arg for arg in func_spect.args if arg != 'self']
+            func_args = [arg for arg in func_spect.args if arg != "self"]
             for arg in func_args:
                 self._param_map[arg] = arg
         return self._param_map
 
     def get_loss(self, *args, **kwargs):
         raise NotImplementedError
-    
+
     def _init_param_map(self, key_map=None, **kwargs):
         """检查key_map和其他参数map，并将这些映射关系添加到self._param_map
 
@@ -72,7 +69,9 @@ class LossBase(object):
                 if not isinstance(key, str):
                     raise TypeError(f"key in key_map must be `str`, not `{type(key)}`.")
                 if not isinstance(value, str):
-                    raise TypeError(f"value in key_map must be `str`, not `{type(value)}`.")
+                    raise TypeError(
+                        f"value in key_map must be `str`, not `{type(value)}`."
+                    )
                 self._param_map[key] = value
                 value_counter[value].add(key)
         for key, value in kwargs.items():
@@ -80,22 +79,27 @@ class LossBase(object):
                 self._param_map[key] = key
                 continue
             if not isinstance(value, str):
-                raise TypeError(f"in {key}={value}, value must be `str`, not `{type(value)}`.")
+                raise TypeError(
+                    f"in {key}={value}, value must be `str`, not `{type(value)}`."
+                )
             self._param_map[key] = value
             value_counter[value].add(key)
         for value, key_set in value_counter.items():
             if len(key_set) > 1:
-                raise ValueError(f"Several parameters:{key_set} are provided with one output {value}.")
-        
+                raise ValueError(
+                    f"Several parameters:{key_set} are provided with one output {value}."
+                )
+
         # check consistence between signature and _param_map
         func_spect = inspect.getfullargspec(self.get_loss)
-        func_args = [arg for arg in func_spect.args if arg != 'self']
+        func_args = [arg for arg in func_spect.args if arg != "self"]
         for func_param, input_param in self._param_map.items():
             if func_param not in func_args:
                 raise NameError(
                     f"Parameter `{func_param}` is not in {_get_func_signature(self.get_loss)}. Please check the "
-                    f"initialization parameters, or change its signature.")
-        
+                    f"initialization parameters, or change its signature."
+                )
+
         # evaluate should not have varargs.
         # if func_spect.varargs:
         #     raise NameError(f"Delete `*{func_spect.varargs}` in {get_func_signature(self.get_loss)}(Do not use "
@@ -112,17 +116,21 @@ class LossBase(object):
         if not self._checked:
             # 1. check consistence between signature and _param_map
             func_spect = inspect.getfullargspec(self.get_loss)
-            func_args = set([arg for arg in func_spect.args if arg != 'self'])
+            func_args = set([arg for arg in func_spect.args if arg != "self"])
             for func_arg, input_arg in self._param_map.items():
                 if func_arg not in func_args:
-                    raise NameError(f"`{func_arg}` not in {_get_func_signature(self.get_loss)}.")
-            
+                    raise NameError(
+                        f"`{func_arg}` not in {_get_func_signature(self.get_loss)}."
+                    )
+
             # 2. only part of the _param_map are passed, left are not
             for arg in func_args:
                 if arg not in self._param_map:
                     self._param_map[arg] = arg  # This param does not need mapping.
             self._evaluate_args = func_args
-            self._reverse_param_map = {input_arg: func_arg for func_arg, input_arg in self._param_map.items()}
+            self._reverse_param_map = {
+                input_arg: func_arg for func_arg, input_arg in self._param_map.items()
+            }
 
         mapped_pred_dict = {}
         mapped_target_dict = {}
@@ -131,39 +139,49 @@ class LossBase(object):
                 mapped_pred_dict[mapped_arg] = pred_dict[input_arg]
             if input_arg in target_dict:
                 mapped_target_dict[mapped_arg] = target_dict[input_arg]
-        
+
         # missing
         if not self._checked:
             duplicated = []
             for input_arg, mapped_arg in self._reverse_param_map.items():
                 if input_arg in pred_dict and input_arg in target_dict:
                     duplicated.append(input_arg)
-            check_res = _check_arg_dict_list(self.get_loss, [mapped_pred_dict, mapped_target_dict])
+            check_res = _check_arg_dict_list(
+                self.get_loss, [mapped_pred_dict, mapped_target_dict]
+            )
             # replace missing.
             missing = check_res.missing
             replaced_missing = list(missing)
             for idx, func_arg in enumerate(missing):
                 # Don't delete `` in this information, nor add ``
-                replaced_missing[idx] = f"{self._param_map[func_arg]}" + f"(assign to `{func_arg}` " \
+                replaced_missing[idx] = (
+                    f"{self._param_map[func_arg]}" + f"(assign to `{func_arg}` "
                     f"in `{self.__class__.__name__}`)"
-            
-            check_res = _CheckRes(missing=replaced_missing,
-                                  unused=check_res.unused,
-                                  duplicated=duplicated,
-                                  required=check_res.required,
-                                  all_needed=check_res.all_needed,
-                                  varargs=check_res.varargs)
-            
+                )
+
+            check_res = _CheckRes(
+                missing=replaced_missing,
+                unused=check_res.unused,
+                duplicated=duplicated,
+                required=check_res.required,
+                all_needed=check_res.all_needed,
+                varargs=check_res.varargs,
+            )
+
             if check_res.missing or check_res.duplicated:
-                raise _CheckError(check_res=check_res,
-                                  func_signature=_get_func_signature(self.get_loss))
+                raise _CheckError(
+                    check_res=check_res,
+                    func_signature=_get_func_signature(self.get_loss),
+                )
             self._checked = True
 
-        refined_args = _build_args(self.get_loss, **mapped_pred_dict, **mapped_target_dict)
-        
+        refined_args = _build_args(
+            self.get_loss, **mapped_pred_dict, **mapped_target_dict
+        )
+
         loss = self.get_loss(**refined_args)
         self._checked = True
-        
+
         return loss
 
 
@@ -186,22 +204,24 @@ class LossFunc(LossBase):
         # 传入func作为一个名为`target`的参数
 
     """
-    
+
     def __init__(self, func, key_map=None, **kwargs):
-        
+
         super(LossFunc, self).__init__()
         _check_function_or_method(func)
         self.get_loss = func
         if key_map is not None:
             if not isinstance(key_map, dict):
-                raise RuntimeError(f"Loss error: key_map except a {type({})} but got a {type(key_map)}")
+                raise RuntimeError(
+                    f"Loss error: key_map except a {type({})} but got a {type(key_map)}"
+                )
         self._init_param_map(key_map, **kwargs)
 
 
 class CrossEntropyLoss(LossBase):
     """
     交叉熵损失函数
-    
+
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
     :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
     :param seq_len: 句子的长度, 长度之外的token不会计算loss。
@@ -216,17 +236,25 @@ class CrossEntropyLoss(LossBase):
     Example::
 
         loss = CrossEntropyLoss(pred='pred', target='label', padding_idx=0)
-        
+
     """
-    
-    def __init__(self, pred=None, target=None, seq_len=None, class_in_dim=-1, padding_idx=-100, reduction='mean'):
+
+    def __init__(
+        self,
+        pred=None,
+        target=None,
+        seq_len=None,
+        class_in_dim=-1,
+        padding_idx=-100,
+        reduction="mean",
+    ):
         super(CrossEntropyLoss, self).__init__()
         self._init_param_map(pred=pred, target=target, seq_len=seq_len)
         self.padding_idx = padding_idx
-        assert reduction in ('mean', 'sum', 'none')
+        assert reduction in ("mean", "sum", "none")
         self.reduction = reduction
         self.class_in_dim = class_in_dim
-    
+
     def get_loss(self, pred, target, seq_len=None):
         if pred.dim() > 2:
             if self.class_in_dim == -1:
@@ -236,30 +264,34 @@ class CrossEntropyLoss(LossBase):
                 pred = pred.tranpose(-1, pred)
             pred = pred.reshape(-1, pred.size(-1))
             target = target.reshape(-1)
-        if seq_len is not None and target.dim()>1:
+        if seq_len is not None and target.dim() > 1:
             mask = seq_len_to_mask(seq_len, max_len=target.size(1)).reshape(-1).eq(0)
             target = target.masked_fill(mask, self.padding_idx)
 
-        return F.cross_entropy(input=pred, target=target,
-                               ignore_index=self.padding_idx, reduction=self.reduction)
+        return F.cross_entropy(
+            input=pred,
+            target=target,
+            ignore_index=self.padding_idx,
+            reduction=self.reduction,
+        )
 
 
 class L1Loss(LossBase):
     """
     L1损失函数
-    
+
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
     :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` >`target`
     :param str reduction: 支持'mean'，'sum'和'none'.
-    
+
     """
-    
-    def __init__(self, pred=None, target=None, reduction='mean'):
+
+    def __init__(self, pred=None, target=None, reduction="mean"):
         super(L1Loss, self).__init__()
         self._init_param_map(pred=pred, target=target)
-        assert reduction in ('mean', 'sum', 'none')
+        assert reduction in ("mean", "sum", "none")
         self.reduction = reduction
-    
+
     def get_loss(self, pred, target):
         return F.l1_loss(input=pred, target=target, reduction=self.reduction)
 
@@ -267,30 +299,32 @@ class L1Loss(LossBase):
 class BCELoss(LossBase):
     """
     二分类交叉熵损失函数
-    
+
     :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
     :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
     :param str reduction: 支持 `mean` ，`sum` 和 `none` .
     """
-    
-    def __init__(self, pred=None, target=None, reduction='mean'):
+
+    def __init__(self, pred=None, target=None, reduction="mean"):
         super(BCELoss, self).__init__()
         self._init_param_map(pred=pred, target=target)
-        assert reduction in ('mean', 'sum', 'none')
+        assert reduction in ("mean", "sum", "none")
         self.reduction = reduction
-    
+
     def get_loss(self, pred, target):
-        return F.binary_cross_entropy(input=pred, target=target, reduction=self.reduction)
+        return F.binary_cross_entropy(
+            input=pred, target=target, reduction=self.reduction
+        )
 
 
 class NLLLoss(LossBase):
     """
     负对数似然损失函数
     """
-    
-    def __init__(self, pred=None, target=None, ignore_idx=-100, reduction='mean'):
+
+    def __init__(self, pred=None, target=None, ignore_idx=-100, reduction="mean"):
         """
-        
+
         :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
         :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
         :param ignore_idx: ignore的index，在计算loss时将忽略target中标号为ignore_idx的内容, 可以通过该值代替
@@ -299,51 +333,62 @@ class NLLLoss(LossBase):
         """
         super(NLLLoss, self).__init__()
         self._init_param_map(pred=pred, target=target)
-        assert reduction in ('mean', 'sum', 'none')
+        assert reduction in ("mean", "sum", "none")
         self.reduction = reduction
         self.ignore_idx = ignore_idx
-    
+
     def get_loss(self, pred, target):
-        return F.nll_loss(input=pred, target=target, ignore_index=self.ignore_idx, reduction=self.reduction)
+        return F.nll_loss(
+            input=pred,
+            target=target,
+            ignore_index=self.ignore_idx,
+            reduction=self.reduction,
+        )
 
 
 class LossInForward(LossBase):
     """
     从forward()函数返回结果中获取loss
     """
-    
+
     def __init__(self, loss_key=Const.LOSS):
         """
-        
+
         :param str loss_key: 在forward函数中loss的键名，默认为loss
         """
         super().__init__()
         if not isinstance(loss_key, str):
             raise TypeError(f"Only str allowed for loss_key, got {type(loss_key)}.")
         self.loss_key = loss_key
-    
+
     def get_loss(self, **kwargs):
         if self.loss_key not in kwargs:
             check_res = _CheckRes(
-                missing=[self.loss_key + f"(assign to `{self.loss_key}` in `{self.__class__.__name__}`"],
+                missing=[
+                    self.loss_key
+                    + f"(assign to `{self.loss_key}` in `{self.__class__.__name__}`"
+                ],
                 unused=[],
                 duplicated=[],
                 required=[],
                 all_needed=[],
-                varargs=[])
-            raise _CheckError(check_res=check_res, func_signature=_get_func_signature(self.get_loss))
+                varargs=[],
+            )
+            raise _CheckError(
+                check_res=check_res, func_signature=_get_func_signature(self.get_loss)
+            )
         return kwargs[self.loss_key]
-    
+
     def __call__(self, pred_dict, target_dict, check=False):
-        
+
         loss = self.get_loss(**pred_dict)
-        
+
         if not (isinstance(loss, torch.Tensor) and len(loss.size()) == 0):
             if not isinstance(loss, torch.Tensor):
                 raise TypeError(f"Loss excepted to be a torch.Tensor, got {type(loss)}")
             loss = torch.sum(loss) / (loss.view(-1)).size(0)
             # raise RuntimeError(f"The size of loss excepts to be torch.Size([]), got {loss.size()}")
-        
+
         return loss
 
 
@@ -352,14 +397,27 @@ class CMRC2018Loss(LossBase):
     用于计算CMRC2018中文问答任务。
 
     """
-    def __init__(self, target_start=None, target_end=None, context_len=None, pred_start=None, pred_end=None,
-                  reduction='mean'):
+
+    def __init__(
+        self,
+        target_start=None,
+        target_end=None,
+        context_len=None,
+        pred_start=None,
+        pred_end=None,
+        reduction="mean",
+    ):
         super().__init__()
 
-        assert reduction in ('mean', 'sum')
+        assert reduction in ("mean", "sum")
 
-        self._init_param_map(target_start=target_start, target_end=target_end, context_len=context_len,
-                             pred_start=pred_start, pred_end=pred_end)
+        self._init_param_map(
+            target_start=target_start,
+            target_end=target_end,
+            context_len=context_len,
+            pred_start=pred_start,
+            pred_end=pred_end,
+        )
         self.reduction = reduction
 
     def get_loss(self, target_start, target_end, context_len, pred_start, pred_end):
@@ -375,18 +433,19 @@ class CMRC2018Loss(LossBase):
         batch_size, max_len = pred_end.size()
         mask = seq_len_to_mask(context_len, max_len).eq(0)
 
-        pred_start = pred_start.masked_fill(mask, float('-inf'))
-        pred_end = pred_end.masked_fill(mask, float('-inf'))
+        pred_start = pred_start.masked_fill(mask, float("-inf"))
+        pred_end = pred_end.masked_fill(mask, float("-inf"))
 
-        start_loss = F.cross_entropy(pred_start, target_start, reduction='sum')
-        end_loss = F.cross_entropy(pred_end, target_end, reduction='sum')
+        start_loss = F.cross_entropy(pred_start, target_start, reduction="sum")
+        end_loss = F.cross_entropy(pred_end, target_end, reduction="sum")
 
         loss = start_loss + end_loss
 
-        if self.reduction == 'mean':
+        if self.reduction == "mean":
             loss = loss / batch_size
 
-        return loss/2
+        return loss / 2
+
 
 def _prepare_losser(losser):
     if losser is None:
@@ -395,4 +454,6 @@ def _prepare_losser(losser):
     elif isinstance(losser, LossBase):
         return losser
     else:
-        raise TypeError(f"Type of loss should be `fastNLP.LossBase`, got {type(losser)}")
+        raise TypeError(
+            f"Type of loss should be `fastNLP.LossBase`, got {type(losser)}"
+        )

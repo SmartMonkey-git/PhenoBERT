@@ -1,8 +1,6 @@
 """undocumented"""
 
-__all__ = [
-    "viterbi_decode"
-]
+__all__ = ["viterbi_decode"]
 import torch
 
 
@@ -22,9 +20,9 @@ def viterbi_decode(logits, transitions, mask=None, unpad=False):
 
     """
     batch_size, seq_len, n_tags = logits.size()
-    assert n_tags == transitions.size(0) and n_tags == transitions.size(
-        1), "The shapes of transitions and feats are not " \
-            "compatible."
+    assert n_tags == transitions.size(0) and n_tags == transitions.size(1), (
+        "The shapes of transitions and feats are not compatible."
+    )
     logits = logits.transpose(0, 1).data  # L, B, H
     if mask is not None:
         mask = mask.transpose(0, 1).data.eq(1)  # L, B
@@ -42,13 +40,14 @@ def viterbi_decode(logits, transitions, mask=None, unpad=False):
         score = prev_score + trans_score + cur_score
         best_score, best_dst = score.max(1)
         vpath[i] = best_dst
-        vscore = best_score.masked_fill(mask[i].eq(0).view(batch_size, 1), 0) + \
-                 vscore.masked_fill(mask[i].view(batch_size, 1), 0)
+        vscore = best_score.masked_fill(
+            mask[i].eq(0).view(batch_size, 1), 0
+        ) + vscore.masked_fill(mask[i].view(batch_size, 1), 0)
 
     # backtrace
     batch_idx = torch.arange(batch_size, dtype=torch.long, device=logits.device)
     seq_idx = torch.arange(seq_len, dtype=torch.long, device=logits.device)
-    lens = (mask.long().sum(0) - 1)
+    lens = mask.long().sum(0) - 1
     # idxes [L, B], batched idx from seq_len-1 to 0
     idxes = (lens.view(1, -1) - seq_idx.view(-1, 1)) % seq_len
 
@@ -62,7 +61,7 @@ def viterbi_decode(logits, transitions, mask=None, unpad=False):
     if unpad:
         paths = []
         for idx, seq_len in enumerate(lens):
-            paths.append(ans[idx, :seq_len + 1].tolist())
+            paths.append(ans[idx, : seq_len + 1].tolist())
     else:
         paths = ans
     return paths, ans_score

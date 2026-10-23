@@ -3,9 +3,7 @@
     有用，也请引用一下他们。
 """
 
-__all__ = [
-    "BertModel"
-]
+__all__ = ["BertModel"]
 
 import collections
 import copy
@@ -22,45 +20,46 @@ from ..utils import _get_file_name_base_on_postfix
 from ...io.file_utils import _get_embedding_url, cached_path, PRETRAINED_BERT_MODEL_DIR
 from ...core import logger
 
-CONFIG_FILE = 'bert_config.json'
-VOCAB_NAME = 'vocab.txt'
+CONFIG_FILE = "bert_config.json"
+VOCAB_NAME = "vocab.txt"
 
 BERT_KEY_RENAME_MAP_1 = {
-    'gamma': 'weight',
-    'beta': 'bias',
-    'distilbert.embeddings': 'bert.embeddings',
-    'distilbert.transformer': 'bert.encoder',
+    "gamma": "weight",
+    "beta": "bias",
+    "distilbert.embeddings": "bert.embeddings",
+    "distilbert.transformer": "bert.encoder",
 }
 
 BERT_KEY_RENAME_MAP_2 = {
-    'q_lin': 'self.query',
-    'k_lin': 'self.key',
-    'v_lin': 'self.value',
-    'out_lin': 'output.dense',
-    'sa_layer_norm': 'attention.output.LayerNorm',
-    'ffn.lin1': 'intermediate.dense',
-    'ffn.lin2': 'output.dense',
-    'output_layer_norm': 'output.LayerNorm',
+    "q_lin": "self.query",
+    "k_lin": "self.key",
+    "v_lin": "self.value",
+    "out_lin": "output.dense",
+    "sa_layer_norm": "attention.output.LayerNorm",
+    "ffn.lin1": "intermediate.dense",
+    "ffn.lin2": "output.dense",
+    "output_layer_norm": "output.LayerNorm",
 }
 
 
 class BertConfig(object):
-    """Configuration class to store the configuration of a `BertModel`.
-    """
+    """Configuration class to store the configuration of a `BertModel`."""
 
-    def __init__(self,
-                 vocab_size_or_config_json_file,
-                 hidden_size=768,
-                 num_hidden_layers=12,
-                 num_attention_heads=12,
-                 intermediate_size=3072,
-                 hidden_act="gelu",
-                 hidden_dropout_prob=0.1,
-                 attention_probs_dropout_prob=0.1,
-                 max_position_embeddings=512,
-                 type_vocab_size=2,
-                 initializer_range=0.02,
-                 layer_norm_eps=1e-12):
+    def __init__(
+        self,
+        vocab_size_or_config_json_file,
+        hidden_size=768,
+        num_hidden_layers=12,
+        num_attention_heads=12,
+        intermediate_size=3072,
+        hidden_act="gelu",
+        hidden_dropout_prob=0.1,
+        attention_probs_dropout_prob=0.1,
+        max_position_embeddings=512,
+        type_vocab_size=2,
+        initializer_range=0.02,
+        layer_norm_eps=1e-12,
+    ):
         """Constructs BertConfig.
 
         Args:
@@ -87,7 +86,7 @@ class BertConfig(object):
             layer_norm_eps: The epsilon used by LayerNorm.
         """
         if isinstance(vocab_size_or_config_json_file, str):
-            with open(vocab_size_or_config_json_file, "r", encoding='utf-8') as reader:
+            with open(vocab_size_or_config_json_file, "r", encoding="utf-8") as reader:
                 json_config = json.loads(reader.read())
             for key, value in json_config.items():
                 self.__dict__[key] = value
@@ -105,8 +104,10 @@ class BertConfig(object):
             self.initializer_range = initializer_range
             self.layer_norm_eps = layer_norm_eps
         else:
-            raise ValueError("First argument must be either a vocabulary size (int)"
-                             "or the path to a pretrained model config file (str)")
+            raise ValueError(
+                "First argument must be either a vocabulary size (int)"
+                "or the path to a pretrained model config file (str)"
+            )
 
     @classmethod
     def from_dict(cls, json_object):
@@ -119,7 +120,7 @@ class BertConfig(object):
     @classmethod
     def from_json_file(cls, json_file):
         """Constructs a `BertConfig` from a json file of parameters."""
-        with open(json_file, "r", encoding='utf-8') as reader:
+        with open(json_file, "r", encoding="utf-8") as reader:
             text = reader.read()
         return cls.from_dict(json.loads(text))
 
@@ -136,8 +137,8 @@ class BertConfig(object):
         return json.dumps(self.to_dict(), indent=2, sort_keys=True) + "\n"
 
     def to_json_file(self, json_file_path):
-        """ Save this instance to a json file."""
-        with open(json_file_path, "w", encoding='utf-8') as writer:
+        """Save this instance to a json file."""
+        with open(json_file_path, "w", encoding="utf-8") as writer:
             writer.write(self.to_json_string())
 
 
@@ -152,10 +153,10 @@ def swish(x):
 ACT2FN = {"gelu": gelu, "relu": torch.nn.functional.relu, "swish": swish}
 
 
-def _get_bert_dir(model_dir_or_name: str = 'en-base-uncased'):
+def _get_bert_dir(model_dir_or_name: str = "en-base-uncased"):
     if model_dir_or_name.lower() in PRETRAINED_BERT_MODEL_DIR:
-        model_url = _get_embedding_url('bert', model_dir_or_name.lower())
-        model_dir = cached_path(model_url, name='embedding')
+        model_url = _get_embedding_url("bert", model_dir_or_name.lower())
+        model_dir = cached_path(model_url, name="embedding")
         # 检查是否存在
     elif os.path.isdir(os.path.abspath(os.path.expanduser(model_dir_or_name))):
         model_dir = os.path.abspath(os.path.expanduser(model_dir_or_name))
@@ -167,8 +168,7 @@ def _get_bert_dir(model_dir_or_name: str = 'en-base-uncased'):
 
 class BertLayerNorm(nn.Module):
     def __init__(self, hidden_size, eps=1e-12):
-        """Construct a layernorm module in the TF style (epsilon inside the square root).
-        """
+        """Construct a layernorm module in the TF style (epsilon inside the square root)."""
         super(BertLayerNorm, self).__init__()
         self.weight = nn.Parameter(torch.ones(hidden_size))
         self.bias = nn.Parameter(torch.zeros(hidden_size))
@@ -186,21 +186,29 @@ class DistilBertEmbeddings(nn.Module):
         super(DistilBertEmbeddings, self).__init__()
 
         def create_sinusoidal_embeddings(n_pos, dim, out):
-            position_enc = np.array([
-                [pos / np.power(10000, 2 * (j // 2) / dim) for j in range(dim)]
-                for pos in range(n_pos)
-            ])
+            position_enc = np.array(
+                [
+                    [pos / np.power(10000, 2 * (j // 2) / dim) for j in range(dim)]
+                    for pos in range(n_pos)
+                ]
+            )
             out[:, 0::2] = torch.FloatTensor(np.sin(position_enc[:, 0::2]))
             out[:, 1::2] = torch.FloatTensor(np.cos(position_enc[:, 1::2]))
             out.detach_()
             out.requires_grad = False
 
-        self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=0)
-        self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
+        self.word_embeddings = nn.Embedding(
+            config.vocab_size, config.hidden_size, padding_idx=0
+        )
+        self.position_embeddings = nn.Embedding(
+            config.max_position_embeddings, config.hidden_size
+        )
         if config.sinusoidal_pos_embds:
-            create_sinusoidal_embeddings(n_pos=config.max_position_embeddings,
-                                         dim=config.hidden_size,
-                                         out=self.position_embeddings.weight)
+            create_sinusoidal_embeddings(
+                n_pos=config.max_position_embeddings,
+                dim=config.hidden_size,
+                out=self.position_embeddings.weight,
+            )
 
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=1e-12)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
@@ -218,27 +226,38 @@ class DistilBertEmbeddings(nn.Module):
             The embedded tokens (plus position embeddings, no token_type embeddings)
         """
         seq_length = input_ids.size(1)
-        position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device) # (max_seq_length)
-        position_ids = position_ids.unsqueeze(0).expand_as(input_ids)                      # (bs, max_seq_length)
+        position_ids = torch.arange(
+            seq_length, dtype=torch.long, device=input_ids.device
+        )  # (max_seq_length)
+        position_ids = position_ids.unsqueeze(0).expand_as(
+            input_ids
+        )  # (bs, max_seq_length)
 
-        word_embeddings = self.word_embeddings(input_ids)                   # (bs, max_seq_length, dim)
-        position_embeddings = self.position_embeddings(position_ids)        # (bs, max_seq_length, dim)
+        word_embeddings = self.word_embeddings(input_ids)  # (bs, max_seq_length, dim)
+        position_embeddings = self.position_embeddings(
+            position_ids
+        )  # (bs, max_seq_length, dim)
 
         embeddings = word_embeddings + position_embeddings  # (bs, max_seq_length, dim)
-        embeddings = self.LayerNorm(embeddings)             # (bs, max_seq_length, dim)
-        embeddings = self.dropout(embeddings)               # (bs, max_seq_length, dim)
+        embeddings = self.LayerNorm(embeddings)  # (bs, max_seq_length, dim)
+        embeddings = self.dropout(embeddings)  # (bs, max_seq_length, dim)
         return embeddings
 
 
 class BertEmbeddings(nn.Module):
-    """Construct the embeddings from word, position and token_type embeddings.
-    """
+    """Construct the embeddings from word, position and token_type embeddings."""
 
     def __init__(self, config):
         super(BertEmbeddings, self).__init__()
-        self.word_embeddings = nn.Embedding(config.vocab_size, config.hidden_size, padding_idx=0)
-        self.position_embeddings = nn.Embedding(config.max_position_embeddings, config.hidden_size)
-        self.token_type_embeddings = nn.Embedding(config.type_vocab_size, config.hidden_size)
+        self.word_embeddings = nn.Embedding(
+            config.vocab_size, config.hidden_size, padding_idx=0
+        )
+        self.position_embeddings = nn.Embedding(
+            config.max_position_embeddings, config.hidden_size
+        )
+        self.token_type_embeddings = nn.Embedding(
+            config.type_vocab_size, config.hidden_size
+        )
 
         # self.LayerNorm is not snake-cased to stick with TensorFlow model variable name and be able to load
         # any TensorFlow checkpoint file
@@ -247,7 +266,9 @@ class BertEmbeddings(nn.Module):
 
     def forward(self, input_ids, token_type_ids=None):
         seq_length = input_ids.size(1)
-        position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device)
+        position_ids = torch.arange(
+            seq_length, dtype=torch.long, device=input_ids.device
+        )
         position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
         if token_type_ids is None:
             token_type_ids = torch.zeros_like(input_ids)
@@ -268,7 +289,8 @@ class BertSelfAttention(nn.Module):
         if config.hidden_size % config.num_attention_heads != 0:
             raise ValueError(
                 "The hidden size (%d) is not a multiple of the number of attention "
-                "heads (%d)" % (config.hidden_size, config.num_attention_heads))
+                "heads (%d)" % (config.hidden_size, config.num_attention_heads)
+            )
         self.num_attention_heads = config.num_attention_heads
         self.attention_head_size = int(config.hidden_size / config.num_attention_heads)
         self.all_head_size = self.num_attention_heads * self.attention_head_size
@@ -280,7 +302,10 @@ class BertSelfAttention(nn.Module):
         self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x):
-        new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size)
+        new_x_shape = x.size()[:-1] + (
+            self.num_attention_heads,
+            self.attention_head_size,
+        )
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
@@ -386,7 +411,9 @@ class BertEncoder(nn.Module):
     def __init__(self, config):
         super(BertEncoder, self).__init__()
         layer = BertLayer(config)
-        self.layer = nn.ModuleList([copy.deepcopy(layer) for _ in range(config.num_hidden_layers)])
+        self.layer = nn.ModuleList(
+            [copy.deepcopy(layer) for _ in range(config.num_hidden_layers)]
+        )
 
     def forward(self, hidden_states, attention_mask, output_all_encoded_layers=True):
         all_encoder_layers = []
@@ -447,31 +474,33 @@ class BertModel(nn.Module):
                 "To create a model from a Google pretrained model use "
                 "`model = {}.from_pretrained(PRETRAINED_MODEL_NAME)`".format(
                     self.__class__.__name__, self.__class__.__name__
-                ))
+                )
+            )
         super(BertModel, self).__init__()
         self.config = config
         self.hidden_size = self.config.hidden_size
-        self.model_type = 'bert'
-        if hasattr(config, 'sinusoidal_pos_embds'):
-            self.model_type = 'distilbert'
-        elif 'model_type' in kwargs:
-            self.model_type = kwargs['model_type'].lower()
+        self.model_type = "bert"
+        if hasattr(config, "sinusoidal_pos_embds"):
+            self.model_type = "distilbert"
+        elif "model_type" in kwargs:
+            self.model_type = kwargs["model_type"].lower()
 
-        if self.model_type == 'distilbert':
+        if self.model_type == "distilbert":
             self.embeddings = DistilBertEmbeddings(config)
         else:
             self.embeddings = BertEmbeddings(config)
 
         self.encoder = BertEncoder(config)
-        if self.model_type != 'distilbert':
+        if self.model_type != "distilbert":
             self.pooler = BertPooler(config)
         else:
-            logger.info('DistilBert has NOT pooler, will use hidden states of [CLS] token as pooled output.')
+            logger.info(
+                "DistilBert has NOT pooler, will use hidden states of [CLS] token as pooled output."
+            )
         self.apply(self.init_bert_weights)
 
     def init_bert_weights(self, module):
-        """ Initialize the weights.
-        """
+        """Initialize the weights."""
         if isinstance(module, (nn.Linear, nn.Embedding)):
             # Slightly different from the TF version which uses truncated_normal for initialization
             # cf https://github.com/pytorch/pytorch/pull/5617
@@ -482,7 +511,13 @@ class BertModel(nn.Module):
         if isinstance(module, nn.Linear) and module.bias is not None:
             module.bias.data.zero_()
 
-    def forward(self, input_ids, token_type_ids=None, attention_mask=None, output_all_encoded_layers=True):
+    def forward(
+        self,
+        input_ids,
+        token_type_ids=None,
+        attention_mask=None,
+        output_all_encoded_layers=True,
+    ):
         if attention_mask is None:
             attention_mask = torch.ones_like(input_ids)
         if token_type_ids is None:
@@ -500,15 +535,19 @@ class BertModel(nn.Module):
         # positions we want to attend and -10000.0 for masked positions.
         # Since we are adding it to the raw scores before the softmax, this is
         # effectively the same as removing these entirely.
-        extended_attention_mask = extended_attention_mask.to(dtype=next(self.parameters()).dtype)  # fp16 compatibility
+        extended_attention_mask = extended_attention_mask.to(
+            dtype=next(self.parameters()).dtype
+        )  # fp16 compatibility
         extended_attention_mask = (1.0 - extended_attention_mask) * -10000.0
 
         embedding_output = self.embeddings(input_ids, token_type_ids)
-        encoded_layers = self.encoder(embedding_output,
-                                      extended_attention_mask,
-                                      output_all_encoded_layers=output_all_encoded_layers)
+        encoded_layers = self.encoder(
+            embedding_output,
+            extended_attention_mask,
+            output_all_encoded_layers=output_all_encoded_layers,
+        )
         sequence_output = encoded_layers[-1]
-        if self.model_type != 'distilbert':
+        if self.model_type != "distilbert":
             pooled_output = self.pooler(sequence_output)
         else:
             pooled_output = sequence_output[:, 0]
@@ -518,26 +557,26 @@ class BertModel(nn.Module):
 
     @classmethod
     def from_pretrained(cls, model_dir_or_name, *inputs, **kwargs):
-        state_dict = kwargs.get('state_dict', None)
-        kwargs.pop('state_dict', None)
-        kwargs.pop('cache_dir', None)
-        kwargs.pop('from_tf', None)
+        state_dict = kwargs.get("state_dict", None)
+        kwargs.pop("state_dict", None)
+        kwargs.pop("cache_dir", None)
+        kwargs.pop("from_tf", None)
 
         # get model dir from name or dir
         pretrained_model_dir = _get_bert_dir(model_dir_or_name)
 
         # Load config
-        config_file = _get_file_name_base_on_postfix(pretrained_model_dir, '.json')
+        config_file = _get_file_name_base_on_postfix(pretrained_model_dir, ".json")
         config = BertConfig.from_json_file(config_file)
 
         if state_dict is None:
-            weights_path = _get_file_name_base_on_postfix(pretrained_model_dir, '.bin')
-            state_dict = torch.load(weights_path, map_location='cpu')
+            weights_path = _get_file_name_base_on_postfix(pretrained_model_dir, ".bin")
+            state_dict = torch.load(weights_path, map_location="cpu")
         else:
-            logger.error(f'Cannot load parameters through `state_dict` variable.')
-            raise RuntimeError(f'Cannot load parameters through `state_dict` variable.')
+            logger.error(f"Cannot load parameters through `state_dict` variable.")
+            raise RuntimeError(f"Cannot load parameters through `state_dict` variable.")
 
-        model_type = 'BERT'
+        model_type = "BERT"
         old_keys = []
         new_keys = []
         for key in state_dict.keys():
@@ -545,8 +584,8 @@ class BertModel(nn.Module):
             for key_name in BERT_KEY_RENAME_MAP_1:
                 if key_name in key:
                     new_key = key.replace(key_name, BERT_KEY_RENAME_MAP_1[key_name])
-                    if 'distilbert' in key:
-                        model_type = 'DistilBert'
+                    if "distilbert" in key:
+                        model_type = "DistilBert"
                     break
             if new_key:
                 old_keys.append(key)
@@ -575,28 +614,43 @@ class BertModel(nn.Module):
         unexpected_keys = []
         error_msgs = []
         # copy state_dict so _load_from_state_dict can modify it
-        metadata = getattr(state_dict, '_metadata', None)
+        metadata = getattr(state_dict, "_metadata", None)
         state_dict = state_dict.copy()
         if metadata is not None:
             state_dict._metadata = metadata
 
-        def load(module, prefix=''):
+        def load(module, prefix=""):
             local_metadata = {} if metadata is None else metadata.get(prefix[:-1], {})
             module._load_from_state_dict(
-                state_dict, prefix, local_metadata, True, missing_keys, unexpected_keys, error_msgs)
+                state_dict,
+                prefix,
+                local_metadata,
+                True,
+                missing_keys,
+                unexpected_keys,
+                error_msgs,
+            )
             for name, child in module._modules.items():
                 if child is not None:
-                    load(child, prefix + name + '.')
+                    load(child, prefix + name + ".")
 
-        load(model, prefix='' if hasattr(model, 'bert') else 'bert.')
+        load(model, prefix="" if hasattr(model, "bert") else "bert.")
         if len(missing_keys) > 0:
-            logger.warning("Weights of {} not initialized from pretrained model: {}".format(
-                model.__class__.__name__, missing_keys))
+            logger.warning(
+                "Weights of {} not initialized from pretrained model: {}".format(
+                    model.__class__.__name__, missing_keys
+                )
+            )
         if len(unexpected_keys) > 0:
-            logger.warning("Weights from pretrained model not used in {}: {}".format(
-                model.__class__.__name__, unexpected_keys))
+            logger.warning(
+                "Weights from pretrained model not used in {}: {}".format(
+                    model.__class__.__name__, unexpected_keys
+                )
+            )
 
-        logger.info(f"Load pre-trained {model_type} parameters from file {weights_path}.")
+        logger.info(
+            f"Load pre-trained {model_type} parameters from file {weights_path}."
+        )
         return model
 
 
@@ -689,9 +743,11 @@ def load_vocab(vocab_file):
 class BasicTokenizer(object):
     """Runs basic tokenization (punctuation splitting, lower casing, etc.)."""
 
-    def __init__(self,
-                 do_lower_case=True,
-                 never_split=("[UNK]", "[SEP]", "[PAD]", "[CLS]", "[MASK]")):
+    def __init__(
+        self,
+        do_lower_case=True,
+        never_split=("[UNK]", "[SEP]", "[PAD]", "[CLS]", "[MASK]"),
+    ):
         """Constructs a BasicTokenizer.
 
         Args:
@@ -777,14 +833,16 @@ class BasicTokenizer(object):
         # as is Japanese Hiragana and Katakana. Those alphabets are used to write
         # space-separated words, so they are not treated specially and handled
         # like the all of the other languages.
-        if (((cp >= 0x4E00) and (cp <= 0x9FFF)) or  #
-            ((cp >= 0x3400) and (cp <= 0x4DBF)) or  #
-            ((cp >= 0x20000) and (cp <= 0x2A6DF)) or  #
-            ((cp >= 0x2A700) and (cp <= 0x2B73F)) or  #
-            ((cp >= 0x2B740) and (cp <= 0x2B81F)) or  #
-            ((cp >= 0x2B820) and (cp <= 0x2CEAF)) or
-            ((cp >= 0xF900) and (cp <= 0xFAFF)) or  #
-            ((cp >= 0x2F800) and (cp <= 0x2FA1F))):  #
+        if (
+            ((cp >= 0x4E00) and (cp <= 0x9FFF))  #
+            or ((cp >= 0x3400) and (cp <= 0x4DBF))  #
+            or ((cp >= 0x20000) and (cp <= 0x2A6DF))  #
+            or ((cp >= 0x2A700) and (cp <= 0x2B73F))  #
+            or ((cp >= 0x2B740) and (cp <= 0x2B81F))  #
+            or ((cp >= 0x2B820) and (cp <= 0x2CEAF))
+            or ((cp >= 0xF900) and (cp <= 0xFAFF))  #
+            or ((cp >= 0x2F800) and (cp <= 0x2FA1F))
+        ):  #
             return True
 
         return False
@@ -794,7 +852,7 @@ class BasicTokenizer(object):
         output = []
         for char in text:
             cp = ord(char)
-            if cp == 0 or cp == 0xfffd or _is_control(char):
+            if cp == 0 or cp == 0xFFFD or _is_control(char):
                 continue
             if _is_whitespace(char):
                 output.append(" ")
@@ -834,8 +892,12 @@ def _is_punctuation(char):
     # Characters such as "^", "$", and "`" are not in the Unicode
     # Punctuation class but we treat them as punctuation anyways, for
     # consistency.
-    if (((cp >= 33) and (cp <= 47)) or ((cp >= 58) and (cp <= 64)) or
-       ((cp >= 91) and (cp <= 96)) or ((cp >= 123) and (cp <= 126))):
+    if (
+        ((cp >= 33) and (cp <= 47))
+        or ((cp >= 58) and (cp <= 64))
+        or ((cp >= 91) and (cp <= 96))
+        or ((cp >= 123) and (cp <= 126))
+    ):
         return True
     cat = unicodedata.category(char)
     if cat.startswith("P"):
@@ -846,8 +908,14 @@ def _is_punctuation(char):
 class BertTokenizer(object):
     """Runs end-to-end tokenization: punctuation splitting + wordpiece"""
 
-    def __init__(self, vocab_file, do_lower_case=True, max_len=None, do_basic_tokenize=True,
-                 never_split=("[UNK]", "[SEP]", "[PAD]", "[CLS]", "[MASK]")):
+    def __init__(
+        self,
+        vocab_file,
+        do_lower_case=True,
+        max_len=None,
+        do_basic_tokenize=True,
+        never_split=("[UNK]", "[SEP]", "[PAD]", "[CLS]", "[MASK]"),
+    ):
         """Constructs a BertTokenizer.
 
         Args:
@@ -865,14 +933,19 @@ class BertTokenizer(object):
         if not os.path.isfile(vocab_file):
             raise ValueError(
                 "Can't find a vocabulary file at path '{}'. To load the vocabulary from a Google pretrained "
-                "model use `tokenizer = BertTokenizer.from_pretrained(PRETRAINED_MODEL_NAME)`".format(vocab_file))
+                "model use `tokenizer = BertTokenizer.from_pretrained(PRETRAINED_MODEL_NAME)`".format(
+                    vocab_file
+                )
+            )
         self.vocab = load_vocab(vocab_file)
         self.ids_to_tokens = collections.OrderedDict(
-            [(ids, tok) for tok, ids in self.vocab.items()])
+            [(ids, tok) for tok, ids in self.vocab.items()]
+        )
         self.do_basic_tokenize = do_basic_tokenize
         if do_basic_tokenize:
-            self.basic_tokenizer = BasicTokenizer(do_lower_case=do_lower_case,
-                                                  never_split=never_split)
+            self.basic_tokenizer = BasicTokenizer(
+                do_lower_case=do_lower_case, never_split=never_split
+            )
         self.wordpiece_tokenizer = WordpieceTokenizer(vocab=self.vocab)
         self.max_len = max_len if max_len is not None else int(1e12)
 
@@ -905,7 +978,9 @@ class BertTokenizer(object):
             logger.warning(
                 "Token indices sequence length is longer than the specified maximum "
                 " sequence length for this BERT model ({} > {}). Running this"
-                " sequence through BERT will result in indexing errors".format(len(ids), self.max_len)
+                " sequence through BERT will result in indexing errors".format(
+                    len(ids), self.max_len
+                )
             )
         return ids
 
@@ -926,10 +1001,14 @@ class BertTokenizer(object):
         with open(vocab_file, "w", encoding="utf-8") as writer:
             for token, token_index in sorted(self.vocab.items(), key=lambda kv: kv[1]):
                 if index != token_index:
-                    logger.warning("Saving vocabulary to {}: vocabulary indices are not consecutive."
-                                   " Please check that the vocabulary is not corrupted!".format(vocab_file))
+                    logger.warning(
+                        "Saving vocabulary to {}: vocabulary indices are not consecutive."
+                        " Please check that the vocabulary is not corrupted!".format(
+                            vocab_file
+                        )
+                    )
                     index = token_index
-                writer.write(token + u'\n')
+                writer.write(token + "\n")
                 index += 1
         return vocab_file
 
@@ -939,10 +1018,14 @@ class BertTokenizer(object):
         给定模型的名字或者路径，直接读取vocab.
         """
         model_dir = _get_bert_dir(model_dir_or_name)
-        pretrained_model_name_or_path = _get_file_name_base_on_postfix(model_dir, '.txt')
+        pretrained_model_name_or_path = _get_file_name_base_on_postfix(
+            model_dir, ".txt"
+        )
         logger.info("loading vocabulary file {}".format(pretrained_model_name_or_path))
         max_len = 512
-        kwargs['max_len'] = min(kwargs.get('max_position_embeddings', int(1e12)), max_len)
+        kwargs["max_len"] = min(
+            kwargs.get("max_position_embeddings", int(1e12)), max_len
+        )
         # Instantiate tokenizer.
         tokenizer = cls(pretrained_model_name_or_path, *inputs, **kwargs)
         return tokenizer
@@ -954,26 +1037,34 @@ class _WordPieceBertModel(nn.Module):
 
     """
 
-    def __init__(self, model_dir_or_name: str, layers: str = '-1', pooled_cls: bool=False):
+    def __init__(
+        self, model_dir_or_name: str, layers: str = "-1", pooled_cls: bool = False
+    ):
         super().__init__()
 
         self.tokenzier = BertTokenizer.from_pretrained(model_dir_or_name)
         self.encoder = BertModel.from_pretrained(model_dir_or_name)
         #  检查encoder_layer_number是否合理
         encoder_layer_number = len(self.encoder.encoder.layer)
-        self.layers = list(map(int, layers.split(',')))
+        self.layers = list(map(int, layers.split(",")))
         for layer in self.layers:
             if layer < 0:
-                assert -layer <= encoder_layer_number, f"The layer index:{layer} is out of scope for " \
+                assert -layer <= encoder_layer_number, (
+                    f"The layer index:{layer} is out of scope for "
                     f"a bert model with {encoder_layer_number} layers."
+                )
             else:
-                assert layer < encoder_layer_number, f"The layer index:{layer} is out of scope for " \
+                assert layer < encoder_layer_number, (
+                    f"The layer index:{layer} is out of scope for "
                     f"a bert model with {encoder_layer_number} layers."
+                )
 
-        self._cls_index = self.tokenzier.vocab['[CLS]']
-        self._sep_index = self.tokenzier.vocab['[SEP]']
-        self._wordpiece_unknown_index = self.tokenzier.vocab['[UNK]']
-        self._wordpiece_pad_index = self.tokenzier.vocab['[PAD]']  # 需要用于生成word_piece
+        self._cls_index = self.tokenzier.vocab["[CLS]"]
+        self._sep_index = self.tokenzier.vocab["[SEP]"]
+        self._wordpiece_unknown_index = self.tokenzier.vocab["[UNK]"]
+        self._wordpiece_pad_index = self.tokenzier.vocab[
+            "[PAD]"
+        ]  # 需要用于生成word_piece
         self.pooled_cls = pooled_cls
 
     def index_dataset(self, *datasets, field_name, add_cls_sep=True):
@@ -1001,9 +1092,13 @@ class _WordPieceBertModel(nn.Module):
 
         for index, dataset in enumerate(datasets):
             try:
-                dataset.apply_field(convert_words_to_word_pieces, field_name=field_name, new_field_name='word_pieces',
-                                    is_input=True)
-                dataset.set_pad_val('word_pieces', self._wordpiece_pad_index)
+                dataset.apply_field(
+                    convert_words_to_word_pieces,
+                    field_name=field_name,
+                    new_field_name="word_pieces",
+                    is_input=True,
+                )
+                dataset.set_pad_val("word_pieces", self._wordpiece_pad_index)
             except Exception as e:
                 logger.error(f"Exception happens when processing the {index} dataset.")
                 raise e
@@ -1018,13 +1113,19 @@ class _WordPieceBertModel(nn.Module):
         batch_size, max_len = word_pieces.size()
 
         attn_masks = word_pieces.ne(self._wordpiece_pad_index)
-        bert_outputs, pooled_cls = self.encoder(word_pieces, token_type_ids=token_type_ids, attention_mask=attn_masks,
-                                                output_all_encoded_layers=True)
+        bert_outputs, pooled_cls = self.encoder(
+            word_pieces,
+            token_type_ids=token_type_ids,
+            attention_mask=attn_masks,
+            output_all_encoded_layers=True,
+        )
         # output_layers = [self.layers]  # len(self.layers) x batch_size x max_word_piece_length x hidden_size
-        outputs = bert_outputs[0].new_zeros((len(self.layers), batch_size, max_len, bert_outputs[0].size(-1)))
+        outputs = bert_outputs[0].new_zeros(
+            (len(self.layers), batch_size, max_len, bert_outputs[0].size(-1))
+        )
         for l_index, l in enumerate(self.layers):
             bert_output = bert_outputs[l]
-            if l in (len(bert_outputs)-1, -1) and self.pooled_cls:
+            if l in (len(bert_outputs) - 1, -1) and self.pooled_cls:
                 bert_output[:, 0] = pooled_cls
             outputs[l_index] = bert_output
         return outputs

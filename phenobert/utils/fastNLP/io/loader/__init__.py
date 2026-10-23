@@ -34,7 +34,7 @@ Loader用于读取数据，并将内容读取到 :class:`~fastNLP.DataSet` 或�
     字典的的 key 为 `dataset` 的名称，value 是该 `dataset` 的文件路径::
 
         paths = {'train':'/path/to/train', 'dev': '/path/to/dev', 'test':'/path/to/test'}
-    
+
     在 Loader().load(paths)  返回的 `data_bundle` 中可以用 ``data_bundle.get_dataset('train')`` , ``data_bundle.get_dataset('dev')`` ,
     ``data_bundle.get_dataset('test')`` 来获取对应的 `dataset`
 
@@ -45,33 +45,28 @@ fastNLP 目前提供了如下的 Loader
 """
 
 __all__ = [
-    'Loader',
-    
-    'YelpLoader',
-    'YelpFullLoader',
-    'YelpPolarityLoader',
-    'IMDBLoader',
-    'SSTLoader',
-    'SST2Loader',
+    "Loader",
+    "YelpLoader",
+    "YelpFullLoader",
+    "YelpPolarityLoader",
+    "IMDBLoader",
+    "SSTLoader",
+    "SST2Loader",
     "ChnSentiCorpLoader",
     "THUCNewsLoader",
     "WeiboSenti100kLoader",
-    
-    'ConllLoader',
-    'Conll2003Loader',
-    'Conll2003NERLoader',
-    'OntoNotesNERLoader',
-    'CTBLoader',
+    "ConllLoader",
+    "Conll2003Loader",
+    "Conll2003NERLoader",
+    "OntoNotesNERLoader",
+    "CTBLoader",
     "MsraNERLoader",
     "PeopleDailyNERLoader",
     "WeiboNERLoader",
-    
-    'CSVLoader',
-    'JsonLoader',
-    
-    'CWSLoader',
-    
-    'MNLILoader',
+    "CSVLoader",
+    "JsonLoader",
+    "CWSLoader",
+    "MNLILoader",
     "QuoraLoader",
     "SNLILoader",
     "QNLILoader",
@@ -79,21 +74,41 @@ __all__ = [
     "CNXNLILoader",
     "BQCorpusLoader",
     "LCQMCLoader",
-    
     "CoReferenceLoader",
-
-    "CMRC2018Loader"
+    "CMRC2018Loader",
 ]
-from .classification import YelpLoader, YelpFullLoader, YelpPolarityLoader, IMDBLoader, SSTLoader, SST2Loader, \
-    ChnSentiCorpLoader, THUCNewsLoader, WeiboSenti100kLoader
-from .conll import ConllLoader, Conll2003Loader, Conll2003NERLoader, OntoNotesNERLoader, CTBLoader
+from .classification import (
+    YelpLoader,
+    YelpFullLoader,
+    YelpPolarityLoader,
+    IMDBLoader,
+    SSTLoader,
+    SST2Loader,
+    ChnSentiCorpLoader,
+    THUCNewsLoader,
+    WeiboSenti100kLoader,
+)
+from .conll import (
+    ConllLoader,
+    Conll2003Loader,
+    Conll2003NERLoader,
+    OntoNotesNERLoader,
+    CTBLoader,
+)
 from .conll import MsraNERLoader, PeopleDailyNERLoader, WeiboNERLoader
 from .coreference import CoReferenceLoader
 from .csv import CSVLoader
 from .cws import CWSLoader
 from .json import JsonLoader
 from .loader import Loader
-from .matching import MNLILoader, QuoraLoader, SNLILoader, QNLILoader, RTELoader, CNXNLILoader, BQCorpusLoader, \
-    LCQMCLoader
+from .matching import (
+    MNLILoader,
+    QuoraLoader,
+    SNLILoader,
+    QNLILoader,
+    RTELoader,
+    CNXNLILoader,
+    BQCorpusLoader,
+    LCQMCLoader,
+)
 from .qa import CMRC2018Loader
-

@@ -2,12 +2,8 @@
 metrics 模块实现了 fastNLP 所需的各种常用衡量指标，一般做为 :class:`~fastNLP.Trainer` 的参数使用。
 
 """
-__all__ = [
-    "MetricBase",
-    "AccuracyMetric",
-    "SpanFPreRecMetric",
-    "CMRC2018Metric"
-]
+
+__all__ = ["MetricBase", "AccuracyMetric", "SpanFPreRecMetric", "CMRC2018Metric"]
 
 import inspect
 import warnings
@@ -31,37 +27,37 @@ from .vocabulary import Vocabulary
 class MetricBase(object):
     """
     所有metrics的基类,所有的传入到Trainer, Tester的Metric需要继承自该对象，需要覆盖写入evaluate(), get_metric()方法。
-    
+
         evaluate(xxx)中传入的是一个batch的数据。
-        
+
         get_metric(xxx)当所有数据处理完毕，调用该方法得到最终的metric值
-        
+
     以分类问题中，Accuracy计算为例
     假设model的forward返回dict中包含 `pred` 这个key, 并且该key需要用于Accuracy::
-    
+
         class Model(nn.Module):
             def __init__(xxx):
                 # do something
             def forward(self, xxx):
                 # do something
                 return {'pred': pred, 'other_keys':xxx} # pred's shape: batch_size x num_classes
-                
+
     假设dataset中 `label` 这个field是需要预测的值，并且该field被设置为了target
     对应的AccMetric可以按如下的定义, version1, 只使用这一次::
-    
+
         class AccMetric(MetricBase):
             def __init__(self):
                 super().__init__()
-    
+
                 # 根据你的情况自定义指标
                 self.corr_num = 0
                 self.total = 0
-    
+
             def evaluate(self, label, pred): # 这里的名称需要和dataset中target field与model返回的key是一样的，不然找不到对应的value
                 # dev或test时，每个batch结束会调用一次该方法，需要实现如何根据每个batch累加metric
                 self.total += label.size(0)
                 self.corr_num += label.eq(pred).sum().item()
-    
+
             def get_metric(self, reset=True): # 在这里定义如何计算metric
                 acc = self.corr_num/self.total
                 if reset: # 是否清零以便重新计算
@@ -71,7 +67,7 @@ class MetricBase(object):
 
 
     version2，如果需要复用Metric，比如下一次使用AccMetric时，dataset中目标field不叫label而叫y，或者model的输出不是pred::
-    
+
         class AccMetric(MetricBase):
             def __init__(self, label=None, pred=None):
                 # 假设在另一场景使用时，目标field叫y，model给出的key为pred_y。则只需要在初始化AccMetric时，
@@ -81,16 +77,16 @@ class MetricBase(object):
                 super().__init__()
                 self._init_param_map(label=label, pred=pred) # 该方法会注册label和pred. 仅需要注册evaluate()方法会用到的参数名即可
                 # 如果没有注册该则效果与version1就是一样的
-    
+
                 # 根据你的情况自定义指标
                 self.corr_num = 0
                 self.total = 0
-    
+
             def evaluate(self, label, pred): # 这里的参数名称需要和self._init_param_map()注册时一致。
                 # dev或test时，每个batch结束会调用一次该方法，需要实现如何根据每个batch累加metric
                 self.total += label.size(0)
                 self.corr_num += label.eq(pred).sum().item()
-    
+
             def get_metric(self, reset=True): # 在这里定义如何计算metric
                 acc = self.corr_num/self.total
                 if reset: # 是否清零以便重新计算
@@ -127,7 +123,7 @@ class MetricBase(object):
     def param_map(self):
         if len(self._param_map) == 0:  # 如果为空说明还没有初始化
             func_spect = inspect.getfullargspec(self.evaluate)
-            func_args = [arg for arg in func_spect.args if arg != 'self']
+            func_args = [arg for arg in func_spect.args if arg != "self"]
             for arg in func_args:
                 self._param_map[arg] = arg
         return self._param_map
@@ -153,7 +149,7 @@ class MetricBase(object):
     def get_metric_name(self):
         """
         返回metric的名称
-        
+
         :return:
         """
         return self._metric_name
@@ -176,7 +172,9 @@ class MetricBase(object):
                 if not isinstance(key, str):
                     raise TypeError(f"key in key_map must be `str`, not `{type(key)}`.")
                 if not isinstance(value, str):
-                    raise TypeError(f"value in key_map must be `str`, not `{type(value)}`.")
+                    raise TypeError(
+                        f"value in key_map must be `str`, not `{type(value)}`."
+                    )
                 self._param_map[key] = value
                 value_counter[value].add(key)
         for key, value in kwargs.items():
@@ -184,21 +182,26 @@ class MetricBase(object):
                 self._param_map[key] = key
                 continue
             if not isinstance(value, str):
-                raise TypeError(f"in {key}={value}, value must be `str`, not `{type(value)}`.")
+                raise TypeError(
+                    f"in {key}={value}, value must be `str`, not `{type(value)}`."
+                )
             self._param_map[key] = value
             value_counter[value].add(key)
         for value, key_set in value_counter.items():
             if len(key_set) > 1:
-                raise ValueError(f"Several parameters:{key_set} are provided with one output {value}.")
+                raise ValueError(
+                    f"Several parameters:{key_set} are provided with one output {value}."
+                )
 
         # check consistence between signature and _param_map
         func_spect = inspect.getfullargspec(self.evaluate)
-        func_args = [arg for arg in func_spect.args if arg != 'self']
+        func_args = [arg for arg in func_spect.args if arg != "self"]
         for func_param, input_param in self._param_map.items():
             if func_param not in func_args:
                 raise NameError(
                     f"Parameter `{func_param}` is not in {_get_func_signature(self.evaluate)}. Please check the "
-                    f"initialization parameters, or change its signature.")
+                    f"initialization parameters, or change its signature."
+                )
 
     def _fast_param_map(self, pred_dict, target_dict):
         """Only used as inner function. When the pred_dict, target is unequivocal. Don't need users to pass key_map.
@@ -210,8 +213,8 @@ class MetricBase(object):
         """
         fast_param = {}
         if len(self._param_map) == 2 and len(pred_dict) == 1 and len(target_dict) == 1:
-            fast_param['pred'] = list(pred_dict.values())[0]
-            fast_param['target'] = list(target_dict.values())[0]
+            fast_param["pred"] = list(pred_dict.values())[0]
+            fast_param["target"] = list(target_dict.values())[0]
             return fast_param
         return fast_param
 
@@ -237,20 +240,26 @@ class MetricBase(object):
 
         if not self._checked:
             if not callable(self.evaluate):
-                raise TypeError(f"{self.__class__.__name__}.evaluate has to be callable, not {type(self.evaluate)}.")
+                raise TypeError(
+                    f"{self.__class__.__name__}.evaluate has to be callable, not {type(self.evaluate)}."
+                )
             # 1. check consistence between signature and _param_map
             func_spect = inspect.getfullargspec(self.evaluate)
-            func_args = set([arg for arg in func_spect.args if arg != 'self'])
+            func_args = set([arg for arg in func_spect.args if arg != "self"])
             for func_arg, input_arg in self._param_map.items():
                 if func_arg not in func_args:
-                    raise NameError(f"`{func_arg}` not in {_get_func_signature(self.evaluate)}.")
+                    raise NameError(
+                        f"`{func_arg}` not in {_get_func_signature(self.evaluate)}."
+                    )
 
             # 2. only part of the _param_map are passed, left are not
             for arg in func_args:
                 if arg not in self._param_map:
                     self._param_map[arg] = arg  # This param does not need mapping.
             self._evaluate_args = func_args
-            self._reverse_param_map = {input_arg: func_arg for func_arg, input_arg in self._param_map.items()}
+            self._reverse_param_map = {
+                input_arg: func_arg for func_arg, input_arg in self._param_map.items()
+            }
 
         # need to wrap inputs in dict.
         mapped_pred_dict = {}
@@ -267,28 +276,38 @@ class MetricBase(object):
             for input_arg, mapped_arg in self._reverse_param_map.items():
                 if input_arg in pred_dict and input_arg in target_dict:
                     duplicated.append(input_arg)
-            check_res = _check_arg_dict_list(self.evaluate, [mapped_pred_dict, mapped_target_dict])
+            check_res = _check_arg_dict_list(
+                self.evaluate, [mapped_pred_dict, mapped_target_dict]
+            )
             # only check missing.
             # replace missing.
             missing = check_res.missing
             replaced_missing = list(missing)
             for idx, func_arg in enumerate(missing):
                 # Don't delete `` in this information, nor add ``
-                replaced_missing[idx] = f"{self._param_map[func_arg]}" + f"(assign to `{func_arg}` " \
-                                                                         f"in `{self.__class__.__name__}`)"
+                replaced_missing[idx] = (
+                    f"{self._param_map[func_arg]}" + f"(assign to `{func_arg}` "
+                    f"in `{self.__class__.__name__}`)"
+                )
 
-            check_res = _CheckRes(missing=replaced_missing,
-                                  unused=check_res.unused,
-                                  duplicated=duplicated,
-                                  required=check_res.required,
-                                  all_needed=check_res.all_needed,
-                                  varargs=check_res.varargs)
+            check_res = _CheckRes(
+                missing=replaced_missing,
+                unused=check_res.unused,
+                duplicated=duplicated,
+                required=check_res.required,
+                all_needed=check_res.all_needed,
+                varargs=check_res.varargs,
+            )
 
             if check_res.missing or check_res.duplicated:
-                raise _CheckError(check_res=check_res,
-                                  func_signature=_get_func_signature(self.evaluate))
+                raise _CheckError(
+                    check_res=check_res,
+                    func_signature=_get_func_signature(self.evaluate),
+                )
             self._checked = True
-        refined_args = _build_args(self.evaluate, **mapped_pred_dict, **mapped_target_dict)
+        refined_args = _build_args(
+            self.evaluate, **mapped_pred_dict, **mapped_target_dict
+        )
 
         self.evaluate(**refined_args)
 
@@ -302,7 +321,7 @@ class AccuracyMetric(MetricBase):
 
     def __init__(self, pred=None, target=None, seq_len=None):
         """
-        
+
         :param pred: 参数映射表中 `pred` 的映射关系，None表示映射关系为 `pred` -> `pred`
         :param target: 参数映射表中 `target` 的映射关系，None表示映射关系为 `target` -> `target`
         :param seq_len: 参数映射表中 `seq_len` 的映射关系，None表示映射关系为 `seq_len` -> `seq_len`
@@ -329,15 +348,21 @@ class AccuracyMetric(MetricBase):
         """
         # TODO 这里报错需要更改，因为pred是啥用户并不知道。需要告知用户真实的value
         if not isinstance(pred, torch.Tensor):
-            raise TypeError(f"`pred` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
-                            f"got {type(pred)}.")
+            raise TypeError(
+                f"`pred` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
+                f"got {type(pred)}."
+            )
         if not isinstance(target, torch.Tensor):
-            raise TypeError(f"`target` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
-                            f"got {type(target)}.")
+            raise TypeError(
+                f"`target` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
+                f"got {type(target)}."
+            )
 
         if seq_len is not None and not isinstance(seq_len, torch.Tensor):
-            raise TypeError(f"`seq_lens` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
-                            f"got {type(seq_len)}.")
+            raise TypeError(
+                f"`seq_lens` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
+                f"got {type(seq_len)}."
+            )
 
         if seq_len is not None and target.dim() > 1:
             max_len = target.size(1)
@@ -350,15 +375,21 @@ class AccuracyMetric(MetricBase):
         elif pred.dim() == target.dim() + 1:
             pred = pred.argmax(dim=-1)
             if seq_len is None and target.dim() > 1:
-                warnings.warn("You are not passing `seq_len` to exclude pad when calculate accuracy.")
+                warnings.warn(
+                    "You are not passing `seq_len` to exclude pad when calculate accuracy."
+                )
         else:
-            raise RuntimeError(f"In {_get_func_signature(self.evaluate)}, when pred have "
-                               f"size:{pred.size()}, target should have size: {pred.size()} or "
-                               f"{pred.size()[:-1]}, got {target.size()}.")
+            raise RuntimeError(
+                f"In {_get_func_signature(self.evaluate)}, when pred have "
+                f"size:{pred.size()}, target should have size: {pred.size()} or "
+                f"{pred.size()[:-1]}, got {target.size()}."
+            )
 
         target = target.to(pred)
         if masks is not None:
-            self.acc_count += torch.sum(torch.eq(pred, target).masked_fill(masks.eq(0), 0)).item()
+            self.acc_count += torch.sum(
+                torch.eq(pred, target).masked_fill(masks.eq(0), 0)
+            ).item()
             self.total += torch.sum(masks).item()
         else:
             self.acc_count += torch.sum(torch.eq(pred, target)).item()
@@ -371,7 +402,9 @@ class AccuracyMetric(MetricBase):
         :param bool reset: 在调用完get_metric后是否清空评价指标统计量.
         :return dict evaluate_result: {"acc": float}
         """
-        evaluate_result = {'acc': round(float(self.acc_count) / (self.total + 1e-12), 6)}
+        evaluate_result = {
+            "acc": round(float(self.acc_count) / (self.total + 1e-12), 6)
+        }
         if reset:
             self.acc_count = 0
             self.total = 0
@@ -395,17 +428,22 @@ def _bmes_tag_to_spans(tags, ignore_labels=None):
     for idx, tag in enumerate(tags):
         tag = tag.lower()
         bmes_tag, label = tag[:1], tag[2:]
-        if bmes_tag in ('b', 's'):
+        if bmes_tag in ("b", "s"):
             spans.append((label, [idx, idx]))
-        elif bmes_tag in ('m', 'e') and prev_bmes_tag in ('b', 'm') and label == spans[-1][0]:
+        elif (
+            bmes_tag in ("m", "e")
+            and prev_bmes_tag in ("b", "m")
+            and label == spans[-1][0]
+        ):
             spans[-1][1][1] = idx
         else:
             spans.append((label, [idx, idx]))
         prev_bmes_tag = bmes_tag
-    return [(span[0], (span[1][0], span[1][1] + 1))
-            for span in spans
-            if span[0] not in ignore_labels
-            ]
+    return [
+        (span[0], (span[1][0], span[1][1] + 1))
+        for span in spans
+        if span[0] not in ignore_labels
+    ]
 
 
 def _bmeso_tag_to_spans(tags, ignore_labels=None):
@@ -424,19 +462,24 @@ def _bmeso_tag_to_spans(tags, ignore_labels=None):
     for idx, tag in enumerate(tags):
         tag = tag.lower()
         bmes_tag, label = tag[:1], tag[2:]
-        if bmes_tag in ('b', 's'):
+        if bmes_tag in ("b", "s"):
             spans.append((label, [idx, idx]))
-        elif bmes_tag in ('m', 'e') and prev_bmes_tag in ('b', 'm') and label == spans[-1][0]:
+        elif (
+            bmes_tag in ("m", "e")
+            and prev_bmes_tag in ("b", "m")
+            and label == spans[-1][0]
+        ):
             spans[-1][1][1] = idx
-        elif bmes_tag == 'o':
+        elif bmes_tag == "o":
             pass
         else:
             spans.append((label, [idx, idx]))
         prev_bmes_tag = bmes_tag
-    return [(span[0], (span[1][0], span[1][1] + 1))
-            for span in spans
-            if span[0] not in ignore_labels
-            ]
+    return [
+        (span[0], (span[1][0], span[1][1] + 1))
+        for span in spans
+        if span[0] not in ignore_labels
+    ]
 
 
 def _bioes_tag_to_spans(tags, ignore_labels=None):
@@ -455,19 +498,24 @@ def _bioes_tag_to_spans(tags, ignore_labels=None):
     for idx, tag in enumerate(tags):
         tag = tag.lower()
         bioes_tag, label = tag[:1], tag[2:]
-        if bioes_tag in ('b', 's'):
+        if bioes_tag in ("b", "s"):
             spans.append((label, [idx, idx]))
-        elif bioes_tag in ('i', 'e') and prev_bioes_tag in ('b', 'i') and label == spans[-1][0]:
+        elif (
+            bioes_tag in ("i", "e")
+            and prev_bioes_tag in ("b", "i")
+            and label == spans[-1][0]
+        ):
             spans[-1][1][1] = idx
-        elif bioes_tag == 'o':
+        elif bioes_tag == "o":
             pass
         else:
             spans.append((label, [idx, idx]))
         prev_bioes_tag = bioes_tag
-    return [(span[0], (span[1][0], span[1][1] + 1))
-            for span in spans
-            if span[0] not in ignore_labels
-            ]
+    return [
+        (span[0], (span[1][0], span[1][1] + 1))
+        for span in spans
+        if span[0] not in ignore_labels
+    ]
 
 
 def _bio_tag_to_spans(tags, ignore_labels=None):
@@ -486,16 +534,20 @@ def _bio_tag_to_spans(tags, ignore_labels=None):
     for idx, tag in enumerate(tags):
         tag = tag.lower()
         bio_tag, label = tag[:1], tag[2:]
-        if bio_tag == 'b':
+        if bio_tag == "b":
             spans.append((label, [idx, idx]))
-        elif bio_tag == 'i' and prev_bio_tag in ('b', 'i') and label == spans[-1][0]:
+        elif bio_tag == "i" and prev_bio_tag in ("b", "i") and label == spans[-1][0]:
             spans[-1][1][1] = idx
-        elif bio_tag == 'o':  # o tag does not count
+        elif bio_tag == "o":  # o tag does not count
             pass
         else:
             spans.append((label, [idx, idx]))
         prev_bio_tag = bio_tag
-    return [(span[0], (span[1][0], span[1][1] + 1)) for span in spans if span[0] not in ignore_labels]
+    return [
+        (span[0], (span[1][0], span[1][1] + 1))
+        for span in spans
+        if span[0] not in ignore_labels
+    ]
 
 
 def _get_encoding_type_from_tag_vocab(tag_vocab: Union[Vocabulary, dict]) -> str:
@@ -506,8 +558,8 @@ def _get_encoding_type_from_tag_vocab(tag_vocab: Union[Vocabulary, dict]) -> str
     :return:
     """
     tag_set = set()
-    unk_token = '<unk>'
-    pad_token = '<pad>'
+    unk_token = "<unk>"
+    pad_token = "<pad>"
     if isinstance(tag_vocab, Vocabulary):
         unk_token = tag_vocab.unknown
         pad_token = tag_vocab.padding
@@ -518,23 +570,27 @@ def _get_encoding_type_from_tag_vocab(tag_vocab: Union[Vocabulary, dict]) -> str
         tag = tag[:1].lower()
         tag_set.add(tag)
 
-    bmes_tag_set = set('bmes')
+    bmes_tag_set = set("bmes")
     if tag_set == bmes_tag_set:
-        return 'bmes'
-    bio_tag_set = set('bio')
+        return "bmes"
+    bio_tag_set = set("bio")
     if tag_set == bio_tag_set:
-        return 'bio'
-    bmeso_tag_set = set('bmeso')
+        return "bio"
+    bmeso_tag_set = set("bmeso")
     if tag_set == bmeso_tag_set:
-        return 'bmeso'
-    bioes_tag_set = set('bioes')
+        return "bmeso"
+    bioes_tag_set = set("bioes")
     if tag_set == bioes_tag_set:
-        return 'bioes'
-    raise RuntimeError("encoding_type cannot be inferred automatically. Only support "
-                       "'bio', 'bmes', 'bmeso', 'bioes' type.")
+        return "bioes"
+    raise RuntimeError(
+        "encoding_type cannot be inferred automatically. Only support "
+        "'bio', 'bmes', 'bmeso', 'bioes' type."
+    )
 
 
-def _check_tag_vocab_and_encoding_type(tag_vocab: Union[Vocabulary, dict], encoding_type: str):
+def _check_tag_vocab_and_encoding_type(
+    tag_vocab: Union[Vocabulary, dict], encoding_type: str
+):
     """
     检查vocab中的tag是否与encoding_type是匹配的
 
@@ -543,8 +599,8 @@ def _check_tag_vocab_and_encoding_type(tag_vocab: Union[Vocabulary, dict], encod
     :return:
     """
     tag_set = set()
-    unk_token = '<unk>'
-    pad_token = '<pad>'
+    unk_token = "<unk>"
+    pad_token = "<pad>"
     if isinstance(tag_vocab, Vocabulary):
         unk_token = tag_vocab.unknown
         pad_token = tag_vocab.padding
@@ -557,12 +613,16 @@ def _check_tag_vocab_and_encoding_type(tag_vocab: Union[Vocabulary, dict], encod
 
     tags = encoding_type
     for tag in tag_set:
-        assert tag in tags, f"{tag} is not a valid tag in encoding type:{encoding_type}. Please check your " \
-                            f"encoding_type."
-        tags = tags.replace(tag, '')  # 删除该值
+        assert tag in tags, (
+            f"{tag} is not a valid tag in encoding type:{encoding_type}. Please check your "
+            f"encoding_type."
+        )
+        tags = tags.replace(tag, "")  # 删除该值
     if tags:  # 如果不为空，说明出现了未使用的tag
-        warnings.warn(f"Tag:{tags} in encoding type:{encoding_type} is not presented in your Vocabulary. Check your "
-                      "encoding_type.")
+        warnings.warn(
+            f"Tag:{tags} in encoding type:{encoding_type} is not presented in your Vocabulary. Check your "
+            "encoding_type."
+        )
 
 
 class SpanFPreRecMetric(MetricBase):
@@ -571,15 +631,15 @@ class SpanFPreRecMetric(MetricBase):
     比如中文Part of speech中，会以character的方式进行标注，句子 `中国在亚洲` 对应的POS可能为(以BMES为例)
     ['B-NN', 'E-NN', 'S-DET', 'B-NN', 'E-NN']。该metric就是为类似情况下的F1计算。
     最后得到的metric结果为::
-    
+
         {
             'f': xxx, # 这里使用f考虑以后可以计算f_beta值
             'pre': xxx,
             'rec':xxx
         }
-    
+
     若only_gross=False, 即还会返回各个label的metric统计值::
-    
+
         {
             'f': xxx,
             'pre': xxx,
@@ -591,10 +651,20 @@ class SpanFPreRecMetric(MetricBase):
         }
     """
 
-    def __init__(self, tag_vocab, pred=None, target=None, seq_len=None, encoding_type=None, ignore_labels=None,
-                 only_gross=True, f_type='micro', beta=1):
+    def __init__(
+        self,
+        tag_vocab,
+        pred=None,
+        target=None,
+        seq_len=None,
+        encoding_type=None,
+        ignore_labels=None,
+        only_gross=True,
+        f_type="micro",
+        beta=1,
+    ):
         r"""
-        
+
         :param tag_vocab: 标签的 :class:`~fastNLP.Vocabulary` 。支持的标签为"B"(没有label)；或"B-xxx"(xxx为某种label，比如POS中的NN)，
             在解码时，会将相同xxx的认为是同一个label，比如['B-NN', 'E-NN']会被合并为一个'NN'.
         :param str pred: 用该key在evaluate()时从传入dict中取出prediction数据。 为None，则使用 `pred` 取数据
@@ -608,9 +678,15 @@ class SpanFPreRecMetric(MetricBase):
         """
 
         if not isinstance(tag_vocab, Vocabulary):
-            raise TypeError("tag_vocab can only be fastNLP.Vocabulary, not {}.".format(type(tag_vocab)))
-        if f_type not in ('micro', 'macro'):
-            raise ValueError("f_type only supports `micro` or `macro`', got {}.".format(f_type))
+            raise TypeError(
+                "tag_vocab can only be fastNLP.Vocabulary, not {}.".format(
+                    type(tag_vocab)
+                )
+            )
+        if f_type not in ("micro", "macro"):
+            raise ValueError(
+                "f_type only supports `micro` or `macro`', got {}.".format(f_type)
+            )
 
         if encoding_type:
             encoding_type = encoding_type.lower()
@@ -619,13 +695,13 @@ class SpanFPreRecMetric(MetricBase):
         else:
             self.encoding_type = _get_encoding_type_from_tag_vocab(tag_vocab)
 
-        if self.encoding_type == 'bmes':
+        if self.encoding_type == "bmes":
             self.tag_to_span_func = _bmes_tag_to_spans
-        elif self.encoding_type == 'bio':
+        elif self.encoding_type == "bio":
             self.tag_to_span_func = _bio_tag_to_spans
-        elif self.encoding_type == 'bmeso':
+        elif self.encoding_type == "bmeso":
             self.tag_to_span_func = _bmeso_tag_to_spans
-        elif self.encoding_type == 'bioes':
+        elif self.encoding_type == "bioes":
             self.tag_to_span_func = _bioes_tag_to_spans
         else:
             raise ValueError("Only support 'bio', 'bmes', 'bmeso', 'bioes' type.")
@@ -633,7 +709,7 @@ class SpanFPreRecMetric(MetricBase):
         self.ignore_labels = ignore_labels
         self.f_type = f_type
         self.beta = beta
-        self.beta_square = self.beta ** 2
+        self.beta_square = self.beta**2
         self.only_gross = only_gross
 
         super().__init__()
@@ -654,15 +730,21 @@ class SpanFPreRecMetric(MetricBase):
         :return:
         """
         if not isinstance(pred, torch.Tensor):
-            raise TypeError(f"`pred` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
-                            f"got {type(pred)}.")
+            raise TypeError(
+                f"`pred` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
+                f"got {type(pred)}."
+            )
         if not isinstance(target, torch.Tensor):
-            raise TypeError(f"`target` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
-                            f"got {type(target)}.")
+            raise TypeError(
+                f"`target` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
+                f"got {type(target)}."
+            )
 
         if not isinstance(seq_len, torch.Tensor):
-            raise TypeError(f"`seq_lens` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
-                            f"got {type(seq_len)}.")
+            raise TypeError(
+                f"`seq_lens` in {_get_func_signature(self.evaluate)} must be torch.Tensor,"
+                f"got {type(seq_len)}."
+            )
 
         if pred.size() == target.size() and len(target.size()) == 2:
             pass
@@ -670,25 +752,33 @@ class SpanFPreRecMetric(MetricBase):
             num_classes = pred.size(-1)
             pred = pred.argmax(dim=-1)
             if (target >= num_classes).any():
-                raise ValueError("A gold label passed to SpanBasedF1Metric contains an "
-                                 "id >= {}, the number of classes.".format(num_classes))
+                raise ValueError(
+                    "A gold label passed to SpanBasedF1Metric contains an "
+                    "id >= {}, the number of classes.".format(num_classes)
+                )
         else:
-            raise RuntimeError(f"In {_get_func_signature(self.evaluate)}, when pred have "
-                               f"size:{pred.size()}, target should have size: {pred.size()} or "
-                               f"{pred.size()[:-1]}, got {target.size()}.")
+            raise RuntimeError(
+                f"In {_get_func_signature(self.evaluate)}, when pred have "
+                f"size:{pred.size()}, target should have size: {pred.size()} or "
+                f"{pred.size()[:-1]}, got {target.size()}."
+            )
 
         batch_size = pred.size(0)
         pred = pred.tolist()
         target = target.tolist()
         for i in range(batch_size):
-            pred_tags = pred[i][:int(seq_len[i])]
-            gold_tags = target[i][:int(seq_len[i])]
+            pred_tags = pred[i][: int(seq_len[i])]
+            gold_tags = target[i][: int(seq_len[i])]
 
             pred_str_tags = [self.tag_vocab.to_word(tag) for tag in pred_tags]
             gold_str_tags = [self.tag_vocab.to_word(tag) for tag in gold_tags]
 
-            pred_spans = self.tag_to_span_func(pred_str_tags, ignore_labels=self.ignore_labels)
-            gold_spans = self.tag_to_span_func(gold_str_tags, ignore_labels=self.ignore_labels)
+            pred_spans = self.tag_to_span_func(
+                pred_str_tags, ignore_labels=self.ignore_labels
+            )
+            gold_spans = self.tag_to_span_func(
+                gold_str_tags, ignore_labels=self.ignore_labels
+            )
 
             for span in pred_spans:
                 if span in gold_spans:
@@ -702,7 +792,7 @@ class SpanFPreRecMetric(MetricBase):
     def get_metric(self, reset=True):
         """get_metric函数将根据evaluate函数累计的评价指标统计量来计算最终的评价结果."""
         evaluate_result = {}
-        if not self.only_gross or self.f_type == 'macro':
+        if not self.only_gross or self.f_type == "macro":
             tags = set(self._false_negatives.keys())
             tags.update(set(self._false_positives.keys()))
             tags.update(set(self._true_positives.keys()))
@@ -717,26 +807,28 @@ class SpanFPreRecMetric(MetricBase):
                 f_sum += f
                 pre_sum += pre
                 rec_sum += rec
-                if not self.only_gross and tag != '':  # tag!=''防止无tag的情况
-                    f_key = 'f-{}'.format(tag)
-                    pre_key = 'pre-{}'.format(tag)
-                    rec_key = 'rec-{}'.format(tag)
+                if not self.only_gross and tag != "":  # tag!=''防止无tag的情况
+                    f_key = "f-{}".format(tag)
+                    pre_key = "pre-{}".format(tag)
+                    rec_key = "rec-{}".format(tag)
                     evaluate_result[f_key] = f
                     evaluate_result[pre_key] = pre
                     evaluate_result[rec_key] = rec
 
-            if self.f_type == 'macro':
-                evaluate_result['f'] = f_sum / len(tags)
-                evaluate_result['pre'] = pre_sum / len(tags)
-                evaluate_result['rec'] = rec_sum / len(tags)
+            if self.f_type == "macro":
+                evaluate_result["f"] = f_sum / len(tags)
+                evaluate_result["pre"] = pre_sum / len(tags)
+                evaluate_result["rec"] = rec_sum / len(tags)
 
-        if self.f_type == 'micro':
-            f, pre, rec = self._compute_f_pre_rec(sum(self._true_positives.values()),
-                                                  sum(self._false_negatives.values()),
-                                                  sum(self._false_positives.values()))
-            evaluate_result['f'] = f
-            evaluate_result['pre'] = pre
-            evaluate_result['rec'] = rec
+        if self.f_type == "micro":
+            f, pre, rec = self._compute_f_pre_rec(
+                sum(self._true_positives.values()),
+                sum(self._false_negatives.values()),
+                sum(self._false_positives.values()),
+            )
+            evaluate_result["f"] = f
+            evaluate_result["pre"] = pre
+            evaluate_result["rec"] = rec
 
         if reset:
             self._true_positives = defaultdict(int)
@@ -779,18 +871,25 @@ def _prepare_metrics(metrics):
                 if isinstance(metric, MetricBase):
                     metric_name = metric.__class__.__name__
                     if not callable(metric.evaluate):
-                        raise TypeError(f"{metric_name}.evaluate must be callable, got {type(metric.evaluate)}.")
+                        raise TypeError(
+                            f"{metric_name}.evaluate must be callable, got {type(metric.evaluate)}."
+                        )
                     if not callable(metric.get_metric):
-                        raise TypeError(f"{metric_name}.get_metric must be callable, got {type(metric.get_metric)}.")
+                        raise TypeError(
+                            f"{metric_name}.get_metric must be callable, got {type(metric.get_metric)}."
+                        )
                     _metrics.append(metric)
                 else:
                     raise TypeError(
-                        f"The type of metric in metrics must be `fastNLP.MetricBase`, not `{type(metric)}`.")
+                        f"The type of metric in metrics must be `fastNLP.MetricBase`, not `{type(metric)}`."
+                    )
         elif isinstance(metrics, MetricBase):
             _metrics = [metrics]
         else:
-            raise TypeError(f"The type of metrics should be `list[fastNLP.MetricBase]` or `fastNLP.MetricBase`, "
-                            f"got {type(metrics)}.")
+            raise TypeError(
+                f"The type of metrics should be `list[fastNLP.MetricBase]` or `fastNLP.MetricBase`, "
+                f"got {type(metrics)}."
+            )
     return _metrics
 
 
@@ -803,7 +902,7 @@ def _accuracy_topk(y_true, y_prob, k=1):
     :returns acc: accuracy of top-k
 
     """
-    y_pred_topk = np.argsort(y_prob, axis=-1)[:, -1:-k - 1:-1]
+    y_pred_topk = np.argsort(y_prob, axis=-1)[:, -1 : -k - 1 : -1]
     y_true_tile = np.tile(np.expand_dims(y_true, axis=1), (1, k))
     y_match = np.any(y_pred_topk == y_true_tile, axis=-1)
     acc = np.sum(y_match) / y_match.shape[0]
@@ -820,19 +919,29 @@ def _pred_topk(y_prob, k=1):
         y_prob_topk: ndarray, size [n_samples, k], probabilities for top-k labels
 
     """
-    y_pred_topk = np.argsort(y_prob, axis=-1)[:, -1:-k - 1:-1]
-    x_axis_index = np.tile(
-        np.arange(len(y_prob))[:, np.newaxis],
-        (1, k))
+    y_pred_topk = np.argsort(y_prob, axis=-1)[:, -1 : -k - 1 : -1]
+    x_axis_index = np.tile(np.arange(len(y_prob))[:, np.newaxis], (1, k))
     y_prob_topk = y_prob[x_axis_index, y_pred_topk]
     return y_pred_topk, y_prob_topk
 
 
 class CMRC2018Metric(MetricBase):
-    def __init__(self, answers=None, raw_chars=None, context_len=None, pred_start=None, pred_end=None):
+    def __init__(
+        self,
+        answers=None,
+        raw_chars=None,
+        context_len=None,
+        pred_start=None,
+        pred_end=None,
+    ):
         super().__init__()
-        self._init_param_map(answers=answers, raw_chars=raw_chars, context_len=context_len, pred_start=pred_start,
-                             pred_end=pred_end)
+        self._init_param_map(
+            answers=answers,
+            raw_chars=raw_chars,
+            context_len=context_len,
+            pred_start=pred_start,
+            pred_end=pred_end,
+        )
         self.em = 0
         self.total = 0
         self.f1 = 0
@@ -849,15 +958,21 @@ class CMRC2018Metric(MetricBase):
         """
         batch_size, max_len = pred_start.size()
         context_mask = seq_len_to_mask(context_len, max_len=max_len).eq(0)
-        pred_start.masked_fill_(context_mask, float('-inf'))
-        pred_end.masked_fill_(context_mask, float('-inf'))
-        max_pred_start, pred_start_index = pred_start.max(dim=-1, keepdim=True)  # batch_size,
-        pred_start_mask = pred_start.eq(max_pred_start).cumsum(dim=-1).eq(0)  # 只能预测这之后的值
-        pred_end.masked_fill_(pred_start_mask, float('-inf'))
+        pred_start.masked_fill_(context_mask, float("-inf"))
+        pred_end.masked_fill_(context_mask, float("-inf"))
+        max_pred_start, pred_start_index = pred_start.max(
+            dim=-1, keepdim=True
+        )  # batch_size,
+        pred_start_mask = (
+            pred_start.eq(max_pred_start).cumsum(dim=-1).eq(0)
+        )  # 只能预测这之后的值
+        pred_end.masked_fill_(pred_start_mask, float("-inf"))
         pred_end_index = pred_end.argmax(dim=-1) + 1
         pred_ans = []
-        for index, (start, end) in enumerate(zip(pred_start_index.flatten().tolist(), pred_end_index.tolist())):
-            pred_ans.append(''.join(raw_chars[index][start:end]))
+        for index, (start, end) in enumerate(
+            zip(pred_start_index.flatten().tolist(), pred_end_index.tolist())
+        ):
+            pred_ans.append("".join(raw_chars[index][start:end]))
         for answer, pred_an in zip(answers, pred_ans):
             pred_an = pred_an.strip()
             self.f1 += _calc_cmrc2018_f1_score(answer, pred_an)
@@ -865,24 +980,61 @@ class CMRC2018Metric(MetricBase):
             self.em += _calc_cmrc2018_em_score(answer, pred_an)
 
     def get_metric(self, reset=True):
-        eval_res = {'f1': round(self.f1 / self.total*100, 2), 'em': round(self.em / self.total*100, 2)}
+        eval_res = {
+            "f1": round(self.f1 / self.total * 100, 2),
+            "em": round(self.em / self.total * 100, 2),
+        }
         if reset:
             self.em = 0
             self.total = 0
             self.f1 = 0
         return eval_res
 
+
 # split Chinese
 def _cn_segmentation(in_str, rm_punc=False):
     in_str = str(in_str).lower().strip()
     segs_out = []
     temp_str = ""
-    sp_char = {'-', ':', '_', '*', '^', '/', '\\', '~', '`', '+', '=', '，', '。', '：', '？', '！', '“', '”', '；', '’', '《',
-               '》', '……', '·', '、', '「', '」', '（', '）', '－', '～', '『', '』'}
+    sp_char = {
+        "-",
+        ":",
+        "_",
+        "*",
+        "^",
+        "/",
+        "\\",
+        "~",
+        "`",
+        "+",
+        "=",
+        "，",
+        "。",
+        "：",
+        "？",
+        "！",
+        "“",
+        "”",
+        "；",
+        "’",
+        "《",
+        "》",
+        "……",
+        "·",
+        "、",
+        "「",
+        "」",
+        "（",
+        "）",
+        "－",
+        "～",
+        "『",
+        "』",
+    }
     for char in in_str:
         if rm_punc and char in sp_char:
             continue
-        if re.search(r'[\u4e00-\u9fa5]', char) or char in sp_char:
+        if re.search(r"[\u4e00-\u9fa5]", char) or char in sp_char:
             if temp_str != "":
                 ss = list(temp_str)
                 segs_out.extend(ss)
@@ -902,16 +1054,48 @@ def _cn_segmentation(in_str, rm_punc=False):
 # remove punctuation
 def _remove_punctuation(in_str):
     in_str = str(in_str).lower().strip()
-    sp_char = ['-', ':', '_', '*', '^', '/', '\\', '~', '`', '+', '=',
-               '，', '。', '：', '？', '！', '“', '”', '；', '’', '《', '》', '……', '·', '、',
-               '「', '」', '（', '）', '－', '～', '『', '』']
+    sp_char = [
+        "-",
+        ":",
+        "_",
+        "*",
+        "^",
+        "/",
+        "\\",
+        "~",
+        "`",
+        "+",
+        "=",
+        "，",
+        "。",
+        "：",
+        "？",
+        "！",
+        "“",
+        "”",
+        "；",
+        "’",
+        "《",
+        "》",
+        "……",
+        "·",
+        "、",
+        "「",
+        "」",
+        "（",
+        "）",
+        "－",
+        "～",
+        "『",
+        "』",
+    ]
     out_segs = []
     for char in in_str:
         if char in sp_char:
             continue
         else:
             out_segs.append(char)
-    return ''.join(out_segs)
+    return "".join(out_segs)
 
 
 # find longest common string
@@ -926,7 +1110,7 @@ def _find_lcs(s1, s2):
                 if m[i + 1][j + 1] > mmax:
                     mmax = m[i + 1][j + 1]
                     p = i + 1
-    return s1[p - mmax:p], mmax
+    return s1[p - mmax : p], mmax
 
 
 def _calc_cmrc2018_f1_score(answers, prediction):

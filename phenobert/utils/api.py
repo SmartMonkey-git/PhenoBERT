@@ -4,7 +4,15 @@ import torch
 import stanza
 import fasttext
 import warnings
-from util import process_text2phrases, annotate_phrases, ModelLoader, HPOTree, PhraseDataSet4predict, PhraseDataSet4predictFunc, produceCandidateTripleSlow
+from util import (
+    process_text2phrases,
+    annotate_phrases,
+    ModelLoader,
+    HPOTree,
+    PhraseDataSet4predict,
+    PhraseDataSet4predictFunc,
+    produceCandidateTripleSlow,
+)
 from util import cnn_model_path, bert_model_path, fasttext_model_path
 from model import device
 from torch.utils.data import DataLoader
@@ -12,10 +20,12 @@ from torch.utils.data import DataLoader
 # ignore useless warnings
 warnings.simplefilter("ignore", torch.serialization.SourceChangeWarning)
 
-os.environ['MKL_NUMTHREADS'] = "10"
-os.environ['OMP_NUMTHREADS'] = "10"
+os.environ["MKL_NUMTHREADS"] = "10"
+os.environ["OMP_NUMTHREADS"] = "10"
 
-clinical_ner_model = stanza.Pipeline('en', package='mimic', processors={'ner': 'i2b2'}, verbose=False)
+clinical_ner_model = stanza.Pipeline(
+    "en", package="mimic", processors={"ner": "i2b2"}, verbose=False
+)
 loader = ModelLoader()
 hpo_tree = HPOTree()
 hpo_tree.buildHPOTree()
@@ -24,8 +34,15 @@ bert_model = loader.load_all(bert_model_path)
 fasttext_model = fasttext.load_model(fasttext_model_path)
 
 
-
-def annotate_text(text, output=None, param1=0.8, param2=0.6, param3=0.9, use_longest=True, use_step_3=True):
+def annotate_text(
+    text,
+    output=None,
+    param1=0.8,
+    param2=0.6,
+    param3=0.9,
+    use_longest=True,
+    use_step_3=True,
+):
     """
     Annotate free text api.
     :param text: free text
@@ -33,9 +50,21 @@ def annotate_text(text, output=None, param1=0.8, param2=0.6, param3=0.9, use_lon
     """
     text = re.sub("(?<=[A-Z])-(?=[\d])", "", text)
     phrases_list = process_text2phrases(text, clinical_ner_model)
-    result = annotate_phrases(text, phrases_list, hpo_tree, fasttext_model, cnn_model, bert_model,
-                              output, device, param1, param2, param3, use_longest,
-                              use_step_3)
+    result = annotate_phrases(
+        text,
+        phrases_list,
+        hpo_tree,
+        fasttext_model,
+        cnn_model,
+        bert_model,
+        output,
+        device,
+        param1,
+        param2,
+        param3,
+        use_longest,
+        use_step_3,
+    )
     return result
 
 
@@ -51,16 +80,26 @@ def get_L1_HPO_term(phrases_list, param1=0.8):
     with torch.no_grad():
         cnn_model.eval()
         for data in dataloader:
-            input_data = [data["data"].float().to(device), data["seq_len"].int().to(device)]
+            input_data = [
+                data["data"].float().to(device),
+                data["seq_len"].int().to(device),
+            ]
             batch_num = input_data[0].size(0)
             y = cnn_model(input_data)
-            phrase_items = dataset.phrase_list[samples:samples + batch_num]
+            phrase_items = dataset.phrase_list[samples : samples + batch_num]
             samples += batch_num
             prediction = y.argsort().tolist()
             scores_p = y.sort()[0]
             Candidate_hpos = [
-                set([hpo_tree.getIdx2HPO_l1(prediction[idx1][idx2]) for idx2 in range(len(prediction[idx1])) if
-                     scores_p[idx1][idx2] >= param1]) for idx1 in range(len(prediction))]
+                set(
+                    [
+                        hpo_tree.getIdx2HPO_l1(prediction[idx1][idx2])
+                        for idx2 in range(len(prediction[idx1]))
+                        if scores_p[idx1][idx2] >= param1
+                    ]
+                )
+                for idx1 in range(len(prediction))
+            ]
             for phrase_item, j in zip(phrase_items, Candidate_hpos):
                 res.append([phrase_item, j])
     return res
@@ -84,7 +123,9 @@ def get_most_related_HPO_term(phrases_list, param1=0.8, param2=0.6, param3=0.9):
     total_l1_root = hpo_tree.layer1
     for sub_l1_root in total_l1_root:
         # get idx2hpo hpo2idx for given HPO
-        root_idx, hpo_list, n_concept, hpo2idx, idx2hpo = hpo_tree.getMaterial4L1(sub_l1_root)
+        root_idx, hpo_list, n_concept, hpo2idx, idx2hpo = hpo_tree.getMaterial4L1(
+            sub_l1_root
+        )
         total_hpo_list.append(hpo_list)
         total_hpo2idx.append(hpo2idx)
         total_idx2hpo.append(idx2hpo)
@@ -99,23 +140,34 @@ def get_most_related_HPO_term(phrases_list, param1=0.8, param2=0.6, param3=0.9):
             Candidate_hpos_sub = set()
             for l1_hpo in j:
                 l1_idx = hpo_tree.getHPO2idx_l1(l1_hpo)
-                y_sub = total_model[l1_idx](PhraseDataSet4predictFunc(i, fasttext_model)).squeeze()
+                y_sub = total_model[l1_idx](
+                    PhraseDataSet4predictFunc(i, fasttext_model)
+                ).squeeze()
                 if y_sub.size(0) > 10:
                     prediction_sub = y_sub.topk(10)[1].tolist()
                     scores_p_sub = torch.softmax(y_sub, dim=0).topk(10)[0].tolist()
                 else:
                     prediction_sub = y_sub.topk(y_sub.size(0))[1].tolist()
-                    scores_p_sub = torch.softmax(y_sub, dim=0).topk(y_sub.size(0))[0].tolist()
+                    scores_p_sub = (
+                        torch.softmax(y_sub, dim=0).topk(y_sub.size(0))[0].tolist()
+                    )
                 Candidate_hpos_sub.update(
-                    [total_idx2hpo[l1_idx][prediction_sub[idx]] for idx in range(len(prediction_sub)) if
-                     scores_p_sub[idx] >= param2])
+                    [
+                        total_idx2hpo[l1_idx][prediction_sub[idx]]
+                        for idx in range(len(prediction_sub))
+                        if scores_p_sub[idx] >= param2
+                    ]
+                )
             if len(Candidate_hpos_sub) != 0 and "None" not in Candidate_hpos_sub:
                 Candidate_hpos_sub = list(Candidate_hpos_sub)
-                candidate_phrase = [hpo_tree.getNameByHPO(item) for item in Candidate_hpos_sub]
+                candidate_phrase = [
+                    hpo_tree.getNameByHPO(item) for item in Candidate_hpos_sub
+                ]
                 raw_phrase = i
                 # print(raw_phrase, candidate_phrase)
-                ans_hpo, score, class_num = produceCandidateTripleSlow(raw_phrase, candidate_phrase, bert_model,
-                                                                   Candidate_hpos_sub, param3)
+                ans_hpo, score, class_num = produceCandidateTripleSlow(
+                    raw_phrase, candidate_phrase, bert_model, Candidate_hpos_sub, param3
+                )
                 if ans_hpo != "None":
                     res.append([i, ans_hpo])
                     flag = False
@@ -133,6 +185,7 @@ def is_phrase_match_BERT(phrase1, phrase2):
     from fastNLP import DataSetIter, DataSet
     from fastNLP.core.utils import _move_dict_value_to_device
     from my_bert_match import addWords, addWordPiece, processItem, processNum, addSeqlen
+
     # 0 for not match,1 for match
     testset = DataSet({"raw_words": [f"{phrase1}::{phrase2}"]})
     testset.apply(addWords, new_field_name="p_words")
@@ -150,7 +203,11 @@ def is_phrase_match_BERT(phrase1, phrase2):
         outputs = []
         for batch_x, batch_y in test_batch:
             _move_dict_value_to_device(batch_x, batch_y, device=device)
-            outputs.append(bert_model.forward(batch_x["word_pieces"], batch_x["word_nums"], batch_x["seq_len"])['pred'])
+            outputs.append(
+                bert_model.forward(
+                    batch_x["word_pieces"], batch_x["word_nums"], batch_x["seq_len"]
+                )["pred"]
+            )
         outputs = torch.cat(outputs)
         outputs = torch.nn.functional.softmax(outputs, dim=1)
         return ["Not Match", "Related", "Match"][outputs.argmax().item()]

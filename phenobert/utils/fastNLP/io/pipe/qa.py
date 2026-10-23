@@ -3,7 +3,6 @@
 
 """
 
-
 from copy import deepcopy
 
 from .pipe import Pipe
@@ -13,10 +12,10 @@ from .utils import get_tokenizer
 from ...core import DataSet
 from ...core import Vocabulary
 
-__all__ = ['CMRC2018BertPipe']
+__all__ = ["CMRC2018BertPipe"]
 
 
-def _concat_clip(data_bundle, tokenizer, max_len, concat_field_name='raw_chars'):
+def _concat_clip(data_bundle, tokenizer, max_len, concat_field_name="raw_chars"):
     """
     处理data_bundle中的DataSet，将context与question进行tokenize，然后使用[SEP]将两者连接起来。
 
@@ -32,18 +31,20 @@ def _concat_clip(data_bundle, tokenizer, max_len, concat_field_name='raw_chars')
         new_ds = DataSet()
         for ins in ds:
             new_ins = deepcopy(ins)
-            context = ins['context']
-            question = ins['question']
+            context = ins["context"]
+            question = ins["question"]
 
             cnt_lst = tokenizer(context)
             q_lst = tokenizer(question)
 
             answer_start = -1
 
-            if len(cnt_lst) + len(q_lst) + 3 > max_len:  # 预留开头的[CLS]和[SEP]和中间的[sep]
-                if 'answer_starts' in ins and 'answers' in ins:
-                    answer_start = int(ins['answer_starts'][0])
-                    answer = ins['answers'][0]
+            if (
+                len(cnt_lst) + len(q_lst) + 3 > max_len
+            ):  # 预留开头的[CLS]和[SEP]和中间的[sep]
+                if "answer_starts" in ins and "answers" in ins:
+                    answer_start = int(ins["answer_starts"][0])
+                    answer = ins["answers"][0]
                     answer_end = answer_start + len(answer)
                     if answer_end > max_len - 3 - len(q_lst):
                         span_start = answer_end + 3 + len(q_lst) - max_len
@@ -52,23 +53,23 @@ def _concat_clip(data_bundle, tokenizer, max_len, concat_field_name='raw_chars')
                         span_start = 0
                         span_end = max_len - 3 - len(q_lst)
                     cnt_lst = cnt_lst[span_start:span_end]
-                    answer_start = int(ins['answer_starts'][0])
+                    answer_start = int(ins["answer_starts"][0])
                     answer_start -= span_start
-                    answer_end = answer_start + len(ins['answers'][0])
+                    answer_end = answer_start + len(ins["answers"][0])
                 else:
-                    cnt_lst = cnt_lst[:max_len - len(q_lst) - 3]
+                    cnt_lst = cnt_lst[: max_len - len(q_lst) - 3]
             else:
-                if 'answer_starts' in ins and 'answers' in ins:
-                    answer_start = int(ins['answer_starts'][0])
-                    answer_end = answer_start + len(ins['answers'][0])
+                if "answer_starts" in ins and "answers" in ins:
+                    answer_start = int(ins["answer_starts"][0])
+                    answer_end = answer_start + len(ins["answers"][0])
 
-            tokens = cnt_lst + ['[SEP]'] + q_lst
-            new_ins['context_len'] = len(cnt_lst)
+            tokens = cnt_lst + ["[SEP]"] + q_lst
+            new_ins["context_len"] = len(cnt_lst)
             new_ins[concat_field_name] = tokens
 
             if answer_start != -1:
-                new_ins['target_start'] = answer_start
-                new_ins['target_end'] = answer_end - 1
+                new_ins["target_start"] = answer_start
+                new_ins["target_end"] = answer_end - 1
 
             new_ds.append(new_ins)
         data_bundle.set_dataset(new_ds, name)
@@ -101,6 +102,7 @@ class CMRC2018BertPipe(Pipe):
         +-------------+-------------+-----------+--------------+------------+-------+---------+
 
     """
+
     def __init__(self, max_len=510):
         super().__init__()
         self.max_len = max_len
@@ -119,21 +121,34 @@ class CMRC2018BertPipe(Pipe):
         :param data_bundle:
         :return:
         """
-        _tokenizer = get_tokenizer('cn-char', lang='cn')
-        data_bundle = _concat_clip(data_bundle, tokenizer=_tokenizer, max_len=self.max_len, concat_field_name='raw_chars')
+        _tokenizer = get_tokenizer("cn-char", lang="cn")
+        data_bundle = _concat_clip(
+            data_bundle,
+            tokenizer=_tokenizer,
+            max_len=self.max_len,
+            concat_field_name="raw_chars",
+        )
 
         src_vocab = Vocabulary()
-        src_vocab.from_dataset(*[ds for name, ds in data_bundle.iter_datasets() if 'train' in name],
-                               field_name='raw_chars',
-                               no_create_entry_dataset=[ds for name, ds in data_bundle.iter_datasets()
-                                                        if 'train' not in name]
-                               )
-        src_vocab.index_dataset(*data_bundle.datasets.values(), field_name='raw_chars', new_field_name='chars')
-        data_bundle.set_vocab(src_vocab, 'chars')
+        src_vocab.from_dataset(
+            *[ds for name, ds in data_bundle.iter_datasets() if "train" in name],
+            field_name="raw_chars",
+            no_create_entry_dataset=[
+                ds for name, ds in data_bundle.iter_datasets() if "train" not in name
+            ],
+        )
+        src_vocab.index_dataset(
+            *data_bundle.datasets.values(),
+            field_name="raw_chars",
+            new_field_name="chars",
+        )
+        data_bundle.set_vocab(src_vocab, "chars")
 
-        data_bundle.set_ignore_type('raw_chars', 'answers', flag=True)
-        data_bundle.set_input('chars')
-        data_bundle.set_target('raw_chars', 'answers', 'target_start', 'target_end', 'context_len')
+        data_bundle.set_ignore_type("raw_chars", "answers", flag=True)
+        data_bundle.set_input("chars")
+        data_bundle.set_target(
+            "raw_chars", "answers", "target_start", "target_end", "context_len"
+        )
 
         return data_bundle
 

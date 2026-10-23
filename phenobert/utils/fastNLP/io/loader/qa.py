@@ -3,12 +3,11 @@
 
 """
 
-
 from . import Loader
 import json
 from ...core import DataSet, Instance
 
-__all__ = ['CMRC2018Loader']
+__all__ = ["CMRC2018Loader"]
 
 
 class CMRC2018Loader(Loader):
@@ -38,29 +37,38 @@ class CMRC2018Loader(Loader):
     其中answer_starts是从0开始的index。例如"我来自a复旦大学？"，其中"复"的开始index为4。另外"Russell评价说"中的说的index为9, 因为
     英文和数字都直接按照character计量的。
     """
+
     def __init__(self):
         super().__init__()
 
     def _load(self, path: str) -> DataSet:
-        with open(path, 'r', encoding='utf-8') as f:
-            data = json.load(f)['data']
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)["data"]
             ds = DataSet()
             for entry in data:
-                title = entry['title']
-                para = entry['paragraphs'][0]
-                context = para['context']
-                qas = para['qas']
+                title = entry["title"]
+                para = entry["paragraphs"][0]
+                context = para["context"]
+                qas = para["qas"]
                 for qa in qas:
-                    question = qa['question']
-                    ans = qa['answers']
+                    question = qa["question"]
+                    ans = qa["answers"]
                     answers = []
                     answer_starts = []
-                    id = qa['id']
+                    id = qa["id"]
                     for an in ans:
-                        answers.append(an['text'])
-                        answer_starts.append(an['answer_start'])
-                    ds.append(Instance(title=title, context=context, question=question, answers=answers,
-                                       answer_starts=answer_starts,id=id))
+                        answers.append(an["text"])
+                        answer_starts.append(an["answer_start"])
+                    ds.append(
+                        Instance(
+                            title=title,
+                            context=context,
+                            question=question,
+                            answers=answers,
+                            answer_starts=answer_starts,
+                            id=id,
+                        )
+                    )
         return ds
 
     def download(self) -> str:
@@ -69,6 +77,5 @@ class CMRC2018Loader(Loader):
 
         :return:
         """
-        output_dir = self._get_dataset_path('cmrc2018')
+        output_dir = self._get_dataset_path("cmrc2018")
         return output_dir
-

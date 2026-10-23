@@ -3,9 +3,7 @@
 可在 forward 时传入序列的长度, 自动对padding做合适的处理.
 """
 
-__all__ = [
-    "LSTM"
-]
+__all__ = ["LSTM"]
 
 import torch
 import torch.nn as nn
@@ -19,10 +17,18 @@ class LSTM(nn.Module):
 
     """
 
-    def __init__(self, input_size, hidden_size=100, num_layers=1, dropout=0.0, batch_first=True,
-                 bidirectional=False, bias=True):
+    def __init__(
+        self,
+        input_size,
+        hidden_size=100,
+        num_layers=1,
+        dropout=0.0,
+        batch_first=True,
+        bidirectional=False,
+        bias=True,
+    ):
         """
-        
+
         :param input_size:  输入 `x` 的特征维度
         :param hidden_size: 隐状态 `h` 的特征维度.
         :param num_layers: rnn的层数. Default: 1
@@ -34,13 +40,20 @@ class LSTM(nn.Module):
         """
         super(LSTM, self).__init__()
         self.batch_first = batch_first
-        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, bias=bias, batch_first=batch_first,
-                            dropout=dropout, bidirectional=bidirectional)
+        self.lstm = nn.LSTM(
+            input_size,
+            hidden_size,
+            num_layers,
+            bias=bias,
+            batch_first=batch_first,
+            dropout=dropout,
+            bidirectional=bidirectional,
+        )
         self.init_param()
 
     def init_param(self):
         for name, param in self.named_parameters():
-            if 'bias' in name:
+            if "bias" in name:
                 # based on https://github.com/pytorch/pytorch/issues/750#issuecomment-280671871
                 param.data.fill_(0)
                 n = param.size(0)
@@ -72,7 +85,9 @@ class LSTM(nn.Module):
                 x = x[:, sort_idx]
             x = rnn.pack_padded_sequence(x, sort_lens, batch_first=self.batch_first)
             output, hx = self.lstm(x, hx)  # -> [N,L,C]
-            output, _ = rnn.pad_packed_sequence(output, batch_first=self.batch_first, total_length=max_len)
+            output, _ = rnn.pad_packed_sequence(
+                output, batch_first=self.batch_first, total_length=max_len
+            )
             _, unsort_idx = torch.sort(sort_idx, dim=0, descending=False)
             if self.batch_first:
                 output = output[unsort_idx]

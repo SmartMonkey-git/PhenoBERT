@@ -11,38 +11,32 @@
 
 这些类的使用方法如下:
 """
+
 __all__ = [
-    'DataBundle',
-    
-    'EmbedLoader',
-    
-    'Loader',
-    
-    'YelpLoader',
-    'YelpFullLoader',
-    'YelpPolarityLoader',
-    'IMDBLoader',
-    'SSTLoader',
-    'SST2Loader',
+    "DataBundle",
+    "EmbedLoader",
+    "Loader",
+    "YelpLoader",
+    "YelpFullLoader",
+    "YelpPolarityLoader",
+    "IMDBLoader",
+    "SSTLoader",
+    "SST2Loader",
     "ChnSentiCorpLoader",
     "THUCNewsLoader",
     "WeiboSenti100kLoader",
-
-    'ConllLoader',
-    'Conll2003Loader',
-    'Conll2003NERLoader',
-    'OntoNotesNERLoader',
-    'CTBLoader',
+    "ConllLoader",
+    "Conll2003Loader",
+    "Conll2003NERLoader",
+    "OntoNotesNERLoader",
+    "CTBLoader",
     "MsraNERLoader",
     "WeiboNERLoader",
     "PeopleDailyNERLoader",
-
-    'CSVLoader',
-    'JsonLoader',
-
-    'CWSLoader',
-
-    'MNLILoader',
+    "CSVLoader",
+    "JsonLoader",
+    "CWSLoader",
+    "MNLILoader",
     "QuoraLoader",
     "SNLILoader",
     "QNLILoader",
@@ -50,11 +44,8 @@ __all__ = [
     "CNXNLILoader",
     "BQCorpusLoader",
     "LCQMCLoader",
-
     "CMRC2018Loader",
-
     "Pipe",
-
     "YelpFullPipe",
     "YelpPolarityPipe",
     "SSTPipe",
@@ -63,20 +54,15 @@ __all__ = [
     "ChnSentiCorpPipe",
     "THUCNewsPipe",
     "WeiboSenti100kPipe",
-
     "Conll2003Pipe",
     "Conll2003NERPipe",
     "OntoNotesNERPipe",
     "MsraNERPipe",
     "PeopleDailyPipe",
     "WeiboNERPipe",
-
     "CWSPipe",
-    
     "Pipe",
-    
     "CWSPipe",
-    
     "YelpFullPipe",
     "YelpPolarityPipe",
     "SSTPipe",
@@ -85,14 +71,12 @@ __all__ = [
     "ChnSentiCorpPipe",
     "THUCNewsPipe",
     "WeiboSenti100kPipe",
-    
     "Conll2003NERPipe",
     "OntoNotesNERPipe",
     "MsraNERPipe",
     "WeiboNERPipe",
     "PeopleDailyPipe",
     "Conll2003Pipe",
-    
     "MatchingBertPipe",
     "RTEBertPipe",
     "SNLIBertPipe",
@@ -114,12 +98,9 @@ __all__ = [
     "RenamePipe",
     "GranularizePipe",
     "MachingTruncatePipe",
-
     "CMRC2018BertPipe",
-
-    'ModelLoader',
-    'ModelSaver',
-
+    "ModelLoader",
+    "ModelSaver",
 ]
 
 import sys

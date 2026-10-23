@@ -9,7 +9,7 @@ __all__ = [
     "SST2Loader",
     "ChnSentiCorpLoader",
     "THUCNewsLoader",
-    "WeiboSenti100kLoader"
+    "WeiboSenti100kLoader",
 ]
 
 import glob
@@ -29,7 +29,7 @@ class YelpLoader(Loader):
     原始数据中内容应该为, 每一行为一个sample，第一个逗号之前为target，第一个逗号之后为文本内容。
 
     Example::
-    
+
         "1","I got 'new' tires from the..."
         "1","Don't waste your time..."
 
@@ -43,23 +43,23 @@ class YelpLoader(Loader):
        "...", "..."
 
     """
-    
+
     def __init__(self):
         super(YelpLoader, self).__init__()
-    
+
     def _load(self, path: str = None):
         ds = DataSet()
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
-                sep_index = line.index(',')
+                sep_index = line.index(",")
                 target = line[:sep_index]
-                raw_words = line[sep_index + 1:]
-                if target.startswith("\""):
+                raw_words = line[sep_index + 1 :]
+                if target.startswith('"'):
                     target = target[1:]
-                if target.endswith("\""):
+                if target.endswith('"'):
                     target = target[:-1]
-                if raw_words.endswith("\""):
+                if raw_words.endswith('"'):
                     raw_words = raw_words[:-1]
                 if raw_words.startswith('"'):
                     raw_words = raw_words[1:]
@@ -84,35 +84,50 @@ class YelpFullLoader(YelpLoader):
         :param bool re_download: 是否重新下载数据，以重新切分数据。
         :return: str, 数据集的目录地址
         """
-        
-        dataset_name = 'yelp-review-full'
+
+        dataset_name = "yelp-review-full"
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
         modify_time = 0
-        for filepath in glob.glob(os.path.join(data_dir, '*')):
+        for filepath in glob.glob(os.path.join(data_dir, "*")):
             modify_time = os.stat(filepath).st_mtime
             break
-        if time.time() - modify_time > 1 and re_download:  # 通过这种比较丑陋的方式判断一下文件是否是才下载的
+        if (
+            time.time() - modify_time > 1 and re_download
+        ):  # 通过这种比较丑陋的方式判断一下文件是否是才下载的
             shutil.rmtree(data_dir)
             data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        
-        if not os.path.exists(os.path.join(data_dir, 'dev.csv')):
+
+        if not os.path.exists(os.path.join(data_dir, "dev.csv")):
             if dev_ratio > 0:
                 assert 0 < dev_ratio < 1, "dev_ratio should be in range (0,1)."
                 try:
-                    with open(os.path.join(data_dir, 'train.csv'), 'r', encoding='utf-8') as f, \
-                            open(os.path.join(data_dir, 'middle_file.csv'), 'w', encoding='utf-8') as f1, \
-                            open(os.path.join(data_dir, 'dev.csv'), 'w', encoding='utf-8') as f2:
+                    with (
+                        open(
+                            os.path.join(data_dir, "train.csv"), "r", encoding="utf-8"
+                        ) as f,
+                        open(
+                            os.path.join(data_dir, "middle_file.csv"),
+                            "w",
+                            encoding="utf-8",
+                        ) as f1,
+                        open(
+                            os.path.join(data_dir, "dev.csv"), "w", encoding="utf-8"
+                        ) as f2,
+                    ):
                         for line in f:
                             if random.random() < dev_ratio:
                                 f2.write(line)
                             else:
                                 f1.write(line)
-                    os.remove(os.path.join(data_dir, 'train.csv'))
-                    os.renames(os.path.join(data_dir, 'middle_file.csv'), os.path.join(data_dir, 'train.csv'))
+                    os.remove(os.path.join(data_dir, "train.csv"))
+                    os.renames(
+                        os.path.join(data_dir, "middle_file.csv"),
+                        os.path.join(data_dir, "train.csv"),
+                    )
                 finally:
-                    if os.path.exists(os.path.join(data_dir, 'middle_file.csv')):
-                        os.remove(os.path.join(data_dir, 'middle_file.csv'))
-        
+                    if os.path.exists(os.path.join(data_dir, "middle_file.csv")):
+                        os.remove(os.path.join(data_dir, "middle_file.csv"))
+
         return data_dir
 
 
@@ -130,34 +145,49 @@ class YelpPolarityLoader(YelpLoader):
         :param bool re_download: 是否重新下载数据，以重新切分数据。
         :return: str, 数据集的目录地址
         """
-        dataset_name = 'yelp-review-polarity'
+        dataset_name = "yelp-review-polarity"
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
         modify_time = 0
-        for filepath in glob.glob(os.path.join(data_dir, '*')):
+        for filepath in glob.glob(os.path.join(data_dir, "*")):
             modify_time = os.stat(filepath).st_mtime
             break
-        if time.time() - modify_time > 1 and re_download:  # 通过这种比较丑陋的方式判断一下文件是否是才下载的
+        if (
+            time.time() - modify_time > 1 and re_download
+        ):  # 通过这种比较丑陋的方式判断一下文件是否是才下载的
             shutil.rmtree(data_dir)
             data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        
-        if not os.path.exists(os.path.join(data_dir, 'dev.csv')):
+
+        if not os.path.exists(os.path.join(data_dir, "dev.csv")):
             if dev_ratio > 0:
                 assert 0 < dev_ratio < 1, "dev_ratio should be in range (0,1)."
                 try:
-                    with open(os.path.join(data_dir, 'train.csv'), 'r', encoding='utf-8') as f, \
-                            open(os.path.join(data_dir, 'middle_file.csv'), 'w', encoding='utf-8') as f1, \
-                            open(os.path.join(data_dir, 'dev.csv'), 'w', encoding='utf-8') as f2:
+                    with (
+                        open(
+                            os.path.join(data_dir, "train.csv"), "r", encoding="utf-8"
+                        ) as f,
+                        open(
+                            os.path.join(data_dir, "middle_file.csv"),
+                            "w",
+                            encoding="utf-8",
+                        ) as f1,
+                        open(
+                            os.path.join(data_dir, "dev.csv"), "w", encoding="utf-8"
+                        ) as f2,
+                    ):
                         for line in f:
                             if random.random() < dev_ratio:
                                 f2.write(line)
                             else:
                                 f1.write(line)
-                    os.remove(os.path.join(data_dir, 'train.csv'))
-                    os.renames(os.path.join(data_dir, 'middle_file.csv'), os.path.join(data_dir, 'train.csv'))
+                    os.remove(os.path.join(data_dir, "train.csv"))
+                    os.renames(
+                        os.path.join(data_dir, "middle_file.csv"),
+                        os.path.join(data_dir, "train.csv"),
+                    )
                 finally:
-                    if os.path.exists(os.path.join(data_dir, 'middle_file.csv')):
-                        os.remove(os.path.join(data_dir, 'middle_file.csv'))
-        
+                    if os.path.exists(os.path.join(data_dir, "middle_file.csv")):
+                        os.remove(os.path.join(data_dir, "middle_file.csv"))
+
         return data_dir
 
 
@@ -181,28 +211,28 @@ class IMDBLoader(Loader):
        "...", "..."
 
     """
-    
+
     def __init__(self):
         super(IMDBLoader, self).__init__()
-    
+
     def _load(self, path: str):
         dataset = DataSet()
-        with open(path, 'r', encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if not line:
                     continue
-                parts = line.split('\t')
+                parts = line.split("\t")
                 target = parts[0]
                 words = parts[1]
                 if words:
                     dataset.append(Instance(raw_words=words, target=target))
-        
+
         if len(dataset) == 0:
             raise RuntimeError(f"{path} has no valid data.")
-        
+
         return dataset
-    
+
     def download(self, dev_ratio: float = 0.1, re_download=False):
         """
         自动下载数据集，如果你使用了这个数据集，请引用以下的文章
@@ -215,34 +245,49 @@ class IMDBLoader(Loader):
         :param bool re_download: 是否重新下载数据，以重新切分数据。
         :return: str, 数据集的目录地址
         """
-        dataset_name = 'aclImdb'
+        dataset_name = "aclImdb"
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
         modify_time = 0
-        for filepath in glob.glob(os.path.join(data_dir, '*')):
+        for filepath in glob.glob(os.path.join(data_dir, "*")):
             modify_time = os.stat(filepath).st_mtime
             break
-        if time.time() - modify_time > 1 and re_download:  # 通过这种比较丑陋的方式判断一下文件是否是才下载的
+        if (
+            time.time() - modify_time > 1 and re_download
+        ):  # 通过这种比较丑陋的方式判断一下文件是否是才下载的
             shutil.rmtree(data_dir)
             data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        
-        if not os.path.exists(os.path.join(data_dir, 'dev.csv')):
+
+        if not os.path.exists(os.path.join(data_dir, "dev.csv")):
             if dev_ratio > 0:
                 assert 0 < dev_ratio < 1, "dev_ratio should be in range (0,1)."
                 try:
-                    with open(os.path.join(data_dir, 'train.txt'), 'r', encoding='utf-8') as f, \
-                            open(os.path.join(data_dir, 'middle_file.txt'), 'w', encoding='utf-8') as f1, \
-                            open(os.path.join(data_dir, 'dev.txt'), 'w', encoding='utf-8') as f2:
+                    with (
+                        open(
+                            os.path.join(data_dir, "train.txt"), "r", encoding="utf-8"
+                        ) as f,
+                        open(
+                            os.path.join(data_dir, "middle_file.txt"),
+                            "w",
+                            encoding="utf-8",
+                        ) as f1,
+                        open(
+                            os.path.join(data_dir, "dev.txt"), "w", encoding="utf-8"
+                        ) as f2,
+                    ):
                         for line in f:
                             if random.random() < dev_ratio:
                                 f2.write(line)
                             else:
                                 f1.write(line)
-                    os.remove(os.path.join(data_dir, 'train.txt'))
-                    os.renames(os.path.join(data_dir, 'middle_file.txt'), os.path.join(data_dir, 'train.txt'))
+                    os.remove(os.path.join(data_dir, "train.txt"))
+                    os.renames(
+                        os.path.join(data_dir, "middle_file.txt"),
+                        os.path.join(data_dir, "train.txt"),
+                    )
                 finally:
-                    if os.path.exists(os.path.join(data_dir, 'middle_file.txt')):
-                        os.remove(os.path.join(data_dir, 'middle_file.txt'))
-        
+                    if os.path.exists(os.path.join(data_dir, "middle_file.txt")):
+                        os.remove(os.path.join(data_dir, "middle_file.txt"))
+
         return data_dir
 
 
@@ -267,10 +312,10 @@ class SSTLoader(Loader):
     raw_words列是str。
 
     """
-    
+
     def __init__(self):
         super().__init__()
-    
+
     def _load(self, path: str):
         """
         从path读取SST文件
@@ -279,13 +324,13 @@ class SSTLoader(Loader):
         :return: DataSet
         """
         ds = DataSet()
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line:
                     ds.append(Instance(raw_words=line))
         return ds
-    
+
     def download(self):
         """
         自动下载数据集，如果你使用了这个数据集，请引用以下的文章
@@ -294,7 +339,7 @@ class SSTLoader(Loader):
 
         :return: str, 数据集的目录地址
         """
-        output_dir = self._get_dataset_path(dataset_name='sst')
+        output_dir = self._get_dataset_path(dataset_name="sst")
         return output_dir
 
 
@@ -319,10 +364,10 @@ class SST2Loader(Loader):
 
     test的DataSet没有target列。
     """
-    
+
     def __init__(self):
         super().__init__()
-    
+
     def _load(self, path: str):
         """
         从path读取SST2文件
@@ -331,16 +376,16 @@ class SST2Loader(Loader):
         :return: DataSet
         """
         ds = DataSet()
-        
-        with open(path, 'r', encoding='utf-8') as f:
+
+        with open(path, "r", encoding="utf-8") as f:
             f.readline()  # 跳过header
-            if 'test' in os.path.split(path)[1]:
+            if "test" in os.path.split(path)[1]:
                 warnings.warn("SST2's test file has no target.")
                 for line in f:
                     line = line.strip()
                     if line:
-                        sep_index = line.index('\t')
-                        raw_words = line[sep_index + 1:]
+                        sep_index = line.index("\t")
+                        raw_words = line[sep_index + 1 :]
                         if raw_words:
                             ds.append(Instance(raw_words=raw_words))
             else:
@@ -352,7 +397,7 @@ class SST2Loader(Loader):
                         if raw_words:
                             ds.append(Instance(raw_words=raw_words, target=target))
         return ds
-    
+
     def download(self):
         """
         自动下载数据集，如果你使用了该数据集，请引用以下的文章
@@ -361,7 +406,7 @@ class SST2Loader(Loader):
 
         :return:
         """
-        output_dir = self._get_dataset_path(dataset_name='sst-2')
+        output_dir = self._get_dataset_path(dataset_name="sst-2")
         return output_dir
 
 
@@ -386,10 +431,11 @@ class ChnSentiCorpLoader(Loader):
         "..."
 
     """
+
     def __init__(self):
         super().__init__()
 
-    def _load(self, path:str):
+    def _load(self, path: str):
         """
         从path中读取数据
 
@@ -397,14 +443,14 @@ class ChnSentiCorpLoader(Loader):
         :return:
         """
         ds = DataSet()
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, "r", encoding="utf-8") as f:
             f.readline()
             for line in f:
                 line = line.strip()
-                tab_index = line.index('\t')
+                tab_index = line.index("\t")
                 if tab_index != -1:
                     target = line[:tab_index]
-                    raw_chars = line[tab_index+1:]
+                    raw_chars = line[tab_index + 1 :]
                     if raw_chars:
                         ds.append(Instance(raw_chars=raw_chars, target=target))
         return ds
@@ -416,7 +462,7 @@ class ChnSentiCorpLoader(Loader):
 
         :return:
         """
-        output_dir = self._get_dataset_path('chn-senti-corp')
+        output_dir = self._get_dataset_path("chn-senti-corp")
         return output_dir
 
 
@@ -433,7 +479,7 @@ class THUCNewsLoader(Loader):
 
     .. csv-table::
        :header: "raw_words", "target"
-       
+
        "调查-您如何评价热火客场胜绿军总分3-1夺赛点？...", "体育"
        "...", "..."
 
@@ -444,11 +490,11 @@ class THUCNewsLoader(Loader):
 
     def _load(self, path: str = None):
         ds = DataSet()
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
-                sep_index = line.index('\t')
-                raw_chars = line[sep_index + 1:]
+                sep_index = line.index("\t")
+                raw_chars = line[sep_index + 1 :]
                 target = line[:sep_index]
                 if raw_chars:
                     ds.append(Instance(raw_chars=raw_chars, target=target))
@@ -462,7 +508,7 @@ class THUCNewsLoader(Loader):
 
         :return:
         """
-        output_dir = self._get_dataset_path('thuc-news')
+        output_dir = self._get_dataset_path("thuc-news")
         return output_dir
 
 
@@ -481,7 +527,7 @@ class WeiboSenti100kLoader(Loader):
 
     .. csv-table::
         :header: "raw_chars", "target"
-       
+
         "多谢小莲，好运满满[爱你]", "1"
         "能在他乡遇老友真不赖，哈哈，珠儿，我也要用...", "1"
         "...", "..."
@@ -493,7 +539,7 @@ class WeiboSenti100kLoader(Loader):
 
     def _load(self, path: str = None):
         ds = DataSet()
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, "r", encoding="utf-8") as f:
             next(f)
             for line in f:
                 line = line.strip()
@@ -509,5 +555,5 @@ class WeiboSenti100kLoader(Loader):
         在 https://arxiv.org/abs/1906.08101 有使用
         :return:
         """
-        output_dir = self._get_dataset_path('weibo-senti-100k')
+        output_dir = self._get_dataset_path("weibo-senti-100k")
         return output_dir

@@ -9,7 +9,7 @@ __all__ = [
     "CNNERLoader",
     "MsraNERLoader",
     "WeiboNERLoader",
-    "PeopleDailyNERLoader"
+    "PeopleDailyNERLoader",
 ]
 
 import glob
@@ -54,10 +54,10 @@ class ConllLoader(Loader):
     数据中以"-DOCSTART-"开头的行将被忽略，因为该符号在conll 2003中被用为文档分割符。
 
     """
-    
+
     def __init__(self, headers, indexes=None, dropna=True):
         """
-        
+
         :param list headers: 每一列数据的名称，需为List or Tuple  of str。``header`` 与 ``indexes`` 一一对应
         :param list indexes: 需要保留的数据列下标，从0开始。若为 ``None`` ，则所有列都保留。Default: ``None``
         :param bool dropna: 是否忽略非法数据，若 ``False`` ，遇到非法数据时抛出 ``ValueError`` 。Default: ``True``
@@ -65,7 +65,8 @@ class ConllLoader(Loader):
         super(ConllLoader, self).__init__()
         if not isinstance(headers, (list, tuple)):
             raise TypeError(
-                'invalid headers: {}, should be list of strings'.format(headers))
+                "invalid headers: {}, should be list of strings".format(headers)
+            )
         self.headers = headers
         self.dropna = dropna
         if indexes is None:
@@ -74,7 +75,7 @@ class ConllLoader(Loader):
             if len(indexes) != len(headers):
                 raise ValueError
             self.indexes = indexes
-    
+
     def _load(self, path):
         """
         传入的一个文件路径，将该文件读入DataSet中，field由ConllLoader初始化时指定的headers决定。
@@ -115,13 +116,11 @@ class Conll2003Loader(ConllLoader):
        "[...]", "[...]", "[...]", "[...]"
 
     """
-    
+
     def __init__(self):
-        headers = [
-            'raw_words', 'pos', 'chunk', 'ner',
-        ]
+        headers = ["raw_words", "pos", "chunk", "ner"]
         super(Conll2003Loader, self).__init__(headers=headers)
-    
+
     def _load(self, path):
         """
         传入的一个文件路径，将该文件读入DataSet中，field由ConllLoader初始化时指定的headers决定。
@@ -134,7 +133,7 @@ class Conll2003Loader(ConllLoader):
             doc_start = False
             for i, h in enumerate(self.headers):
                 field = data[i]
-                if str(field[0]).startswith('-DOCSTART-'):
+                if str(field[0]).startswith("-DOCSTART-"):
                     doc_start = True
                     break
             if doc_start:
@@ -142,7 +141,7 @@ class Conll2003Loader(ConllLoader):
             ins = {h: data[i] for i, h in enumerate(self.headers)}
             ds.append(Instance(**ins))
         return ds
-    
+
     def download(self, output_dir=None):
         raise RuntimeError("conll2003 cannot be downloaded automatically.")
 
@@ -174,13 +173,11 @@ class Conll2003NERLoader(ConllLoader):
        "[...]",  "[...]"
 
     """
-    
+
     def __init__(self):
-        headers = [
-            'raw_words', 'target',
-        ]
+        headers = ["raw_words", "target"]
         super().__init__(headers=headers, indexes=[0, 3])
-    
+
     def _load(self, path):
         """
         传入的一个文件路径，将该文件读入DataSet中，field由ConllLoader初始化时指定的headers决定。
@@ -193,7 +190,7 @@ class Conll2003NERLoader(ConllLoader):
             doc_start = False
             for i, h in enumerate(self.headers):
                 field = data[i]
-                if str(field[0]).startswith('-DOCSTART-'):
+                if str(field[0]).startswith("-DOCSTART-"):
                     doc_start = True
                     break
             if doc_start:
@@ -203,7 +200,7 @@ class Conll2003NERLoader(ConllLoader):
         if len(ds) == 0:
             raise RuntimeError("No data found {}.".format(path))
         return ds
-    
+
     def download(self):
         raise RuntimeError("conll2003 cannot be downloaded automatically.")
 
@@ -231,59 +228,66 @@ class OntoNotesNERLoader(ConllLoader):
         "[...]", "[...]"
 
     """
-    
+
     def __init__(self):
         super().__init__(headers=[Const.RAW_WORD, Const.TARGET], indexes=[3, 10])
-    
+
     def _load(self, path: str):
         dataset = super()._load(path)
-        
+
         def convert_to_bio(tags):
             bio_tags = []
             flag = None
             for tag in tags:
                 label = tag.strip("()*")
-                if '(' in tag:
-                    bio_label = 'B-' + label
+                if "(" in tag:
+                    bio_label = "B-" + label
                     flag = label
                 elif flag:
-                    bio_label = 'I-' + flag
+                    bio_label = "I-" + flag
                 else:
-                    bio_label = 'O'
-                if ')' in tag:
+                    bio_label = "O"
+                if ")" in tag:
                     flag = None
                 bio_tags.append(bio_label)
             return bio_tags
-        
+
         def convert_word(words):
             converted_words = []
             for word in words:
-                word = word.replace('/.', '.')  # 有些结尾的.是/.形式的
-                if not word.startswith('-'):
+                word = word.replace("/.", ".")  # 有些结尾的.是/.形式的
+                if not word.startswith("-"):
                     converted_words.append(word)
                     continue
                 # 以下是由于这些符号被转义了，再转回来
-                tfrs = {'-LRB-': '(',
-                        '-RRB-': ')',
-                        '-LSB-': '[',
-                        '-RSB-': ']',
-                        '-LCB-': '{',
-                        '-RCB-': '}'
-                        }
+                tfrs = {
+                    "-LRB-": "(",
+                    "-RRB-": ")",
+                    "-LSB-": "[",
+                    "-RSB-": "]",
+                    "-LCB-": "{",
+                    "-RCB-": "}",
+                }
                 if word in tfrs:
                     converted_words.append(tfrs[word])
                 else:
                     converted_words.append(word)
             return converted_words
-        
-        dataset.apply_field(convert_word, field_name=Const.RAW_WORD, new_field_name=Const.RAW_WORD)
-        dataset.apply_field(convert_to_bio, field_name=Const.TARGET, new_field_name=Const.TARGET)
-        
+
+        dataset.apply_field(
+            convert_word, field_name=Const.RAW_WORD, new_field_name=Const.RAW_WORD
+        )
+        dataset.apply_field(
+            convert_to_bio, field_name=Const.TARGET, new_field_name=Const.TARGET
+        )
+
         return dataset
-    
+
     def download(self):
-        raise RuntimeError("Ontonotes cannot be downloaded automatically, you can refer "
-                           "https://github.com/yhcc/OntoNotes-5.0-NER to download and preprocess.")
+        raise RuntimeError(
+            "Ontonotes cannot be downloaded automatically, you can refer "
+            "https://github.com/yhcc/OntoNotes-5.0-NER to download and preprocess."
+        )
 
 
 class CTBLoader(Loader):
@@ -313,16 +317,13 @@ class CTBLoader(Loader):
         "[...]", "[...]", "[...]", "[...]"
 
     """
+
     def __init__(self):
         super().__init__()
-        headers = [
-            'raw_words', 'pos', 'dep_head', 'dep_label',
-        ]
-        indexes = [
-            1, 3, 6, 7,
-        ]
+        headers = ["raw_words", "pos", "dep_head", "dep_label"]
+        indexes = [1, 3, 6, 7]
         self.loader = ConllLoader(headers=headers, indexes=indexes)
-    
+
     def _load(self, path: str):
         dataset = self.loader._load(path)
         return dataset
@@ -358,7 +359,7 @@ class CNNERLoader(Loader):
         :return: DataSet，包含raw_words列和target列
         """
         ds = DataSet()
-        with open(path, 'r', encoding='utf-8') as f:
+        with open(path, "r", encoding="utf-8") as f:
             raw_chars = []
             target = []
             for line in f:
@@ -366,7 +367,7 @@ class CNNERLoader(Loader):
                 if line:
                     parts = line.split()
                     if len(parts) == 1:  # 网上下载的数据有一些列少tag，默认补充O
-                        parts.append('O')
+                        parts.append("O")
                     raw_chars.append(parts[0])
                     target.append(parts[1])
                 else:
@@ -411,10 +412,10 @@ class MsraNERLoader(CNNERLoader):
         "[...]", "[...]"
 
     """
-    
+
     def __init__(self):
         super().__init__()
-    
+
     def download(self, dev_ratio: float = 0.1, re_download: bool = False) -> str:
         """
         自动下载MSAR-NER的数据，如果你使用该数据，请引用 Gina-Anne Levow, 2006, The Third International Chinese Language
@@ -428,23 +429,35 @@ class MsraNERLoader(CNNERLoader):
         :return: str, 数据集的目录地址
         :return:
         """
-        dataset_name = 'msra-ner'
+        dataset_name = "msra-ner"
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
         modify_time = 0
-        for filepath in glob.glob(os.path.join(data_dir, '*')):
+        for filepath in glob.glob(os.path.join(data_dir, "*")):
             modify_time = os.stat(filepath).st_mtime
             break
-        if time.time() - modify_time > 1 and re_download:  # 通过这种比较丑陋的方式判断一下文件是否是才下载的
+        if (
+            time.time() - modify_time > 1 and re_download
+        ):  # 通过这种比较丑陋的方式判断一下文件是否是才下载的
             shutil.rmtree(data_dir)
             data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        
-        if not os.path.exists(os.path.join(data_dir, 'dev.conll')):
+
+        if not os.path.exists(os.path.join(data_dir, "dev.conll")):
             if dev_ratio > 0:
                 assert 0 < dev_ratio < 1, "dev_ratio should be in range (0,1)."
                 try:
-                    with open(os.path.join(data_dir, 'train.conll'), 'r', encoding='utf-8') as f, \
-                            open(os.path.join(data_dir, 'middle_file.conll'), 'w', encoding='utf-8') as f1, \
-                            open(os.path.join(data_dir, 'dev.conll'), 'w', encoding='utf-8') as f2:
+                    with (
+                        open(
+                            os.path.join(data_dir, "train.conll"), "r", encoding="utf-8"
+                        ) as f,
+                        open(
+                            os.path.join(data_dir, "middle_file.conll"),
+                            "w",
+                            encoding="utf-8",
+                        ) as f1,
+                        open(
+                            os.path.join(data_dir, "dev.conll"), "w", encoding="utf-8"
+                        ) as f2,
+                    ):
                         lines = []  # 一个sample包含很多行
                         for line in f:
                             line = line.strip()
@@ -452,16 +465,19 @@ class MsraNERLoader(CNNERLoader):
                                 lines.append(line)
                             else:
                                 if random.random() < dev_ratio:
-                                    f2.write('\n'.join(lines) + '\n\n')
+                                    f2.write("\n".join(lines) + "\n\n")
                                 else:
-                                    f1.write('\n'.join(lines) + '\n\n')
+                                    f1.write("\n".join(lines) + "\n\n")
                                 lines.clear()
-                    os.remove(os.path.join(data_dir, 'train.conll'))
-                    os.renames(os.path.join(data_dir, 'middle_file.conll'), os.path.join(data_dir, 'train.conll'))
+                    os.remove(os.path.join(data_dir, "train.conll"))
+                    os.renames(
+                        os.path.join(data_dir, "middle_file.conll"),
+                        os.path.join(data_dir, "train.conll"),
+                    )
                 finally:
-                    if os.path.exists(os.path.join(data_dir, 'middle_file.conll')):
-                        os.remove(os.path.join(data_dir, 'middle_file.conll'))
-        
+                    if os.path.exists(os.path.join(data_dir, "middle_file.conll")):
+                        os.remove(os.path.join(data_dir, "middle_file.conll"))
+
         return data_dir
 
 
@@ -489,10 +505,11 @@ class WeiboNERLoader(CNNERLoader):
             "['心']", "['O']"
             "[...]", "[...]"
 
-        """
+    """
+
     def __init__(self):
         super().__init__()
-    
+
     def download(self) -> str:
         """
         自动下载Weibo-NER的数据，如果你使用了该数据，请引用 Nanyun Peng and Mark Dredze, 2015, Named Entity Recognition for
@@ -500,9 +517,9 @@ class WeiboNERLoader(CNNERLoader):
 
         :return: str
         """
-        dataset_name = 'weibo-ner'
+        dataset_name = "weibo-ner"
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        
+
         return data_dir
 
 
@@ -530,12 +547,12 @@ class PeopleDailyNERLoader(CNNERLoader):
         "[...]", "[...]"
 
     """
-    
+
     def __init__(self):
         super().__init__()
-    
+
     def download(self) -> str:
-        dataset_name = 'peopledaily'
+        dataset_name = "peopledaily"
         data_dir = self._get_dataset_path(dataset_name=dataset_name)
-        
+
         return data_dir

@@ -1,10 +1,8 @@
 """
 用于载入和保存模型
 """
-__all__ = [
-    "ModelLoader",
-    "ModelSaver"
-]
+
+__all__ = ["ModelLoader", "ModelSaver"]
 
 import torch
 
@@ -13,10 +11,10 @@ class ModelLoader:
     """
     用于读取模型
     """
-    
+
     def __init__(self):
         super(ModelLoader, self).__init__()
-    
+
     @staticmethod
     def load_pytorch(empty_model, model_path):
         """
@@ -26,7 +24,7 @@ class ModelLoader:
         :param str model_path: 模型保存的路径
         """
         empty_model.load_state_dict(torch.load(model_path))
-    
+
     @staticmethod
     def load_pytorch_model(model_path):
         """
@@ -40,21 +38,21 @@ class ModelLoader:
 class ModelSaver(object):
     """
     用于保存模型
-    
+
     Example::
 
         saver = ModelSaver("./save/model_ckpt_100.pkl")
         saver.save_pytorch(model)
 
     """
-    
+
     def __init__(self, save_path):
         """
 
         :param save_path: 模型保存的路径
         """
         self.save_path = save_path
-    
+
     def save_pytorch(self, model, param_only=True):
         """
         把 PyTorch 模型存入 ".pkl" 文件

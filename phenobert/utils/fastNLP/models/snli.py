@@ -2,9 +2,8 @@
 .. todo::
     doc
 """
-__all__ = [
-    "ESIM"
-]
+
+__all__ = ["ESIM"]
 
 import torch
 import torch.nn as nn
@@ -25,10 +24,11 @@ class ESIM(BaseModel):
 
     """
 
-    def __init__(self, embed, hidden_size=None, num_labels=3, dropout_rate=0.3,
-                 dropout_embed=0.1):
+    def __init__(
+        self, embed, hidden_size=None, num_labels=3, dropout_rate=0.3, dropout_embed=0.1
+    ):
         """
-        
+
         :param embed: 初始化的Embedding
         :param int hidden_size: 隐藏层大小，默认值为Embedding的维度
         :param int num_labels: 目标标签种类数量，默认值为3
@@ -44,23 +44,31 @@ class ESIM(BaseModel):
         self.dropout_embed = EmbedDropout(p=dropout_embed)
         if hidden_size is None:
             hidden_size = self.embedding.embed_size
-        self.rnn = BiRNN(self.embedding.embed_size, hidden_size, dropout_rate=dropout_rate)
+        self.rnn = BiRNN(
+            self.embedding.embed_size, hidden_size, dropout_rate=dropout_rate
+        )
         # self.rnn = LSTM(self.embedding.embed_size, hidden_size, dropout=dropout_rate, bidirectional=True)
 
-        self.interfere = nn.Sequential(nn.Dropout(p=dropout_rate),
-                                       nn.Linear(8 * hidden_size, hidden_size),
-                                       nn.ReLU())
+        self.interfere = nn.Sequential(
+            nn.Dropout(p=dropout_rate),
+            nn.Linear(8 * hidden_size, hidden_size),
+            nn.ReLU(),
+        )
         nn.init.xavier_uniform_(self.interfere[1].weight.data)
         self.bi_attention = BiAttention()
 
-        self.rnn_high = BiRNN(self.embedding.embed_size, hidden_size, dropout_rate=dropout_rate)
+        self.rnn_high = BiRNN(
+            self.embedding.embed_size, hidden_size, dropout_rate=dropout_rate
+        )
         # self.rnn_high = LSTM(hidden_size, hidden_size, dropout=dropout_rate, bidirectional=True,)
 
-        self.classifier = nn.Sequential(nn.Dropout(p=dropout_rate),
-                                        nn.Linear(8 * hidden_size, hidden_size),
-                                        nn.Tanh(),
-                                        nn.Dropout(p=dropout_rate),
-                                        nn.Linear(hidden_size, num_labels))
+        self.classifier = nn.Sequential(
+            nn.Dropout(p=dropout_rate),
+            nn.Linear(8 * hidden_size, hidden_size),
+            nn.Tanh(),
+            nn.Dropout(p=dropout_rate),
+            nn.Linear(hidden_size, num_labels),
+        )
 
         self.dropout_rnn = nn.Dropout(p=dropout_rate)
 
@@ -134,9 +142,10 @@ class ESIM(BaseModel):
 
 
 class EmbedDropout(nn.Dropout):
-
     def forward(self, sequences_batch):
-        ones = sequences_batch.data.new_ones(sequences_batch.shape[0], sequences_batch.shape[-1])
+        ones = sequences_batch.data.new_ones(
+            sequences_batch.shape[0], sequences_batch.shape[-1]
+        )
         dropout_mask = nn.functional.dropout(ones, self.p, self.training, inplace=False)
         return dropout_mask.unsqueeze(1) * sequences_batch
 
@@ -145,10 +154,9 @@ class BiRNN(nn.Module):
     def __init__(self, input_size, hidden_size, dropout_rate=0.3):
         super(BiRNN, self).__init__()
         self.dropout_rate = dropout_rate
-        self.rnn = nn.LSTM(input_size, hidden_size,
-                           num_layers=1,
-                           bidirectional=True,
-                           batch_first=True)
+        self.rnn = nn.LSTM(
+            input_size, hidden_size, num_layers=1, bidirectional=True, batch_first=True
+        )
 
     def forward(self, x, x_mask):
         # Sort x
@@ -162,16 +170,19 @@ class BiRNN(nn.Module):
         rnn_input = nn.utils.rnn.pack_padded_sequence(x, lengths, batch_first=True)
         # Apply dropout to input
         if self.dropout_rate > 0:
-            dropout_input = F.dropout(rnn_input.data, p=self.dropout_rate, training=self.training)
-            rnn_input = nn.utils.rnn.PackedSequence(dropout_input, rnn_input.batch_sizes)
+            dropout_input = F.dropout(
+                rnn_input.data, p=self.dropout_rate, training=self.training
+            )
+            rnn_input = nn.utils.rnn.PackedSequence(
+                dropout_input, rnn_input.batch_sizes
+            )
         output = self.rnn(rnn_input)[0]
         # Unpack everything
         output = nn.utils.rnn.pad_packed_sequence(output, batch_first=True)[0]
         output = output.index_select(0, idx_unsort)
         if output.size(1) != x_mask.size(1):
-            padding = torch.zeros(output.size(0),
-                                  x_mask.size(1) - output.size(1),
-                                  output.size(2)).type(output.data.type())
+            padding = torch.zeros(
+                output.size(0), x_mask.size(1) - output.size(1), output.size(2)
+            ).type(output.data.type())
             output = torch.cat([output, padding], 1)
         return output
-

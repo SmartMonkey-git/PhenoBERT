@@ -1,8 +1,6 @@
 """undocumented"""
 
-__all__ = [
-    "CoReferenceLoader",
-]
+__all__ = ["CoReferenceLoader"]
 
 from ...core.dataset import DataSet
 from ..file_reader import _read_json
@@ -32,10 +30,15 @@ class CoReferenceLoader(JsonLoader):
         "...", "...", "...", "..."
 
     """
+
     def __init__(self, fields=None, dropna=False):
         super().__init__(fields, dropna)
-        self.fields = {"doc_key": Const.RAW_WORDS(0), "speakers": Const.RAW_WORDS(1), "clusters": Const.RAW_WORDS(2),
-                       "sentences": Const.RAW_WORDS(3)}
+        self.fields = {
+            "doc_key": Const.RAW_WORDS(0),
+            "speakers": Const.RAW_WORDS(1),
+            "clusters": Const.RAW_WORDS(2),
+            "sentences": Const.RAW_WORDS(3),
+        }
 
     def _load(self, path):
         """

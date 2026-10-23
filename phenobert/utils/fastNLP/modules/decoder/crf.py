@@ -1,9 +1,6 @@
 """undocumented"""
 
-__all__ = [
-    "ConditionalRandomField",
-    "allowed_transitions"
-]
+__all__ = ["ConditionalRandomField", "allowed_transitions"]
 
 from typing import Union
 
@@ -11,11 +8,16 @@ import torch
 from torch import nn
 
 from ..utils import initial_parameter
-from ...core.metrics import _get_encoding_type_from_tag_vocab, _check_tag_vocab_and_encoding_type
+from ...core.metrics import (
+    _get_encoding_type_from_tag_vocab,
+    _check_tag_vocab_and_encoding_type,
+)
 from ...core.vocabulary import Vocabulary
 
 
-def allowed_transitions(tag_vocab:Union[Vocabulary, dict], encoding_type=None, include_start_end=False):
+def allowed_transitions(
+    tag_vocab: Union[Vocabulary, dict], encoding_type=None, include_start_end=False
+):
     """
     给定一个id到label的映射表，返回所有可以跳转的(from_tag_id, to_tag_id)列表。
 
@@ -33,8 +35,8 @@ def allowed_transitions(tag_vocab:Union[Vocabulary, dict], encoding_type=None, i
         encoding_type = encoding_type.lower()
         _check_tag_vocab_and_encoding_type(tag_vocab, encoding_type)
 
-    pad_token = '<pad>'
-    unk_token = '<unk>'
+    pad_token = "<pad>"
+    unk_token = "<unk>"
 
     if isinstance(tag_vocab, Vocabulary):
         id_label_lst = list(tag_vocab.idx2word.items())
@@ -48,12 +50,13 @@ def allowed_transitions(tag_vocab:Union[Vocabulary, dict], encoding_type=None, i
     end_idx = num_tags + 1
     allowed_trans = []
     if include_start_end:
-        id_label_lst += [(start_idx, 'start'), (end_idx, 'end')]
+        id_label_lst += [(start_idx, "start"), (end_idx, "end")]
+
     def split_tag_label(from_label):
         from_label = from_label.lower()
-        if from_label in ['start', 'end']:
+        if from_label in ["start", "end"]:
             from_tag = from_label
-            from_label = ''
+            from_label = ""
         else:
             from_tag = from_label[:1]
             from_label = from_label[2:]
@@ -67,7 +70,9 @@ def allowed_transitions(tag_vocab:Union[Vocabulary, dict], encoding_type=None, i
             if to_label in [pad_token, unk_token]:
                 continue
             to_tag, to_label = split_tag_label(to_label)
-            if _is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label):
+            if _is_transition_allowed(
+                encoding_type, from_tag, from_label, to_tag, to_label
+            ):
                 allowed_trans.append((from_id, to_id))
     return allowed_trans
 
@@ -82,10 +87,10 @@ def _is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label
     :param str to_label: 比如"PER", "LOC"等label
     :return: bool，能否跃迁
     """
-    if to_tag == 'start' or from_tag == 'end':
+    if to_tag == "start" or from_tag == "end":
         return False
     encoding_type = encoding_type.lower()
-    if encoding_type == 'bio':
+    if encoding_type == "bio":
         """
         第一行是to_tag, 第一列是from_tag. y任意条件下可转，-只有在label相同时可转，n不可转
         +-------+---+---+---+-------+-----+
@@ -102,16 +107,20 @@ def _is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label
         | end   | n | n | n | n     | n   |
         +-------+---+---+---+-------+-----+
         """
-        if from_tag == 'start':
-            return to_tag in ('b', 'o')
-        elif from_tag in ['b', 'i']:
-            return any([to_tag in ['end', 'b', 'o'], to_tag == 'i' and from_label == to_label])
-        elif from_tag == 'o':
-            return to_tag in ['end', 'b', 'o']
+        if from_tag == "start":
+            return to_tag in ("b", "o")
+        elif from_tag in ["b", "i"]:
+            return any(
+                [to_tag in ["end", "b", "o"], to_tag == "i" and from_label == to_label]
+            )
+        elif from_tag == "o":
+            return to_tag in ["end", "b", "o"]
         else:
-            raise ValueError("Unexpect tag {}. Expect only 'B', 'I', 'O'.".format(from_tag))
+            raise ValueError(
+                "Unexpect tag {}. Expect only 'B', 'I', 'O'.".format(from_tag)
+            )
 
-    elif encoding_type == 'bmes':
+    elif encoding_type == "bmes":
         """
         第一行是to_tag, 第一列是from_tag，y任意条件下可转，-只有在label相同时可转，n不可转
         +-------+---+---+---+---+-------+-----+
@@ -130,40 +139,54 @@ def _is_transition_allowed(encoding_type, from_tag, from_label, to_tag, to_label
         |  end  | n | n | n | n |   n   |  n  |
         +-------+---+---+---+---+-------+-----+
         """
-        if from_tag == 'start':
-            return to_tag in ['b', 's']
-        elif from_tag == 'b':
-            return to_tag in ['m', 'e'] and from_label == to_label
-        elif from_tag == 'm':
-            return to_tag in ['m', 'e'] and from_label == to_label
-        elif from_tag in ['e', 's']:
-            return to_tag in ['b', 's', 'end']
+        if from_tag == "start":
+            return to_tag in ["b", "s"]
+        elif from_tag == "b":
+            return to_tag in ["m", "e"] and from_label == to_label
+        elif from_tag == "m":
+            return to_tag in ["m", "e"] and from_label == to_label
+        elif from_tag in ["e", "s"]:
+            return to_tag in ["b", "s", "end"]
         else:
-            raise ValueError("Unexpect tag type {}. Expect only 'B', 'M', 'E', 'S'.".format(from_tag))
-    elif encoding_type == 'bmeso':
-        if from_tag == 'start':
-            return to_tag in ['b', 's', 'o']
-        elif from_tag == 'b':
-            return to_tag in ['m', 'e'] and from_label == to_label
-        elif from_tag == 'm':
-            return to_tag in ['m', 'e'] and from_label == to_label
-        elif from_tag in ['e', 's', 'o']:
-            return to_tag in ['b', 's', 'end', 'o']
+            raise ValueError(
+                "Unexpect tag type {}. Expect only 'B', 'M', 'E', 'S'.".format(from_tag)
+            )
+    elif encoding_type == "bmeso":
+        if from_tag == "start":
+            return to_tag in ["b", "s", "o"]
+        elif from_tag == "b":
+            return to_tag in ["m", "e"] and from_label == to_label
+        elif from_tag == "m":
+            return to_tag in ["m", "e"] and from_label == to_label
+        elif from_tag in ["e", "s", "o"]:
+            return to_tag in ["b", "s", "end", "o"]
         else:
-            raise ValueError("Unexpect tag type {}. Expect only 'B', 'M', 'E', 'S', 'O'.".format(from_tag))
-    elif encoding_type == 'bioes':
-        if from_tag == 'start':
-            return to_tag in ['b', 's', 'o']
-        elif from_tag == 'b':
-            return to_tag in ['i', 'e'] and from_label == to_label
-        elif from_tag == 'i':
-            return to_tag in ['i', 'e'] and from_label == to_label
-        elif from_tag in ['e', 's', 'o']:
-            return to_tag in ['b', 's', 'end', 'o']
+            raise ValueError(
+                "Unexpect tag type {}. Expect only 'B', 'M', 'E', 'S', 'O'.".format(
+                    from_tag
+                )
+            )
+    elif encoding_type == "bioes":
+        if from_tag == "start":
+            return to_tag in ["b", "s", "o"]
+        elif from_tag == "b":
+            return to_tag in ["i", "e"] and from_label == to_label
+        elif from_tag == "i":
+            return to_tag in ["i", "e"] and from_label == to_label
+        elif from_tag in ["e", "s", "o"]:
+            return to_tag in ["b", "s", "end", "o"]
         else:
-            raise ValueError("Unexpect tag type {}. Expect only 'B', 'I', 'E', 'S', 'O'.".format(from_tag))
+            raise ValueError(
+                "Unexpect tag type {}. Expect only 'B', 'I', 'E', 'S', 'O'.".format(
+                    from_tag
+                )
+            )
     else:
-        raise ValueError("Only support BIO, BMES, BMESO, BIOES encoding type, got {}.".format(encoding_type))
+        raise ValueError(
+            "Only support BIO, BMES, BMESO, BIOES encoding type, got {}.".format(
+                encoding_type
+            )
+        )
 
 
 class ConditionalRandomField(nn.Module):
@@ -172,10 +195,15 @@ class ConditionalRandomField(nn.Module):
 
     """
 
-    def __init__(self, num_tags, include_start_end_trans=False, allowed_transitions=None,
-                 initial_method=None):
+    def __init__(
+        self,
+        num_tags,
+        include_start_end_trans=False,
+        allowed_transitions=None,
+        initial_method=None,
+    ):
         """
-        
+
         :param int num_tags: 标签的数量
         :param bool include_start_end_trans: 是否考虑各个tag作为开始以及结尾的分数。
         :param List[Tuple[from_tag_id(int), to_tag_id(int)]] allowed_transitions: 内部的Tuple[from_tag_id(int),
@@ -197,7 +225,9 @@ class ConditionalRandomField(nn.Module):
         if allowed_transitions is None:
             constrain = torch.zeros(num_tags + 2, num_tags + 2)
         else:
-            constrain = torch.full((num_tags + 2, num_tags + 2), fill_value=-10000.0, dtype=torch.float)
+            constrain = torch.full(
+                (num_tags + 2, num_tags + 2), fill_value=-10000.0, dtype=torch.float
+            )
             for from_tag_id, to_tag_id in allowed_transitions:
                 constrain[from_tag_id, to_tag_id] = 0
         self._constrain = nn.Parameter(constrain, requires_grad=False)
@@ -223,8 +253,9 @@ class ConditionalRandomField(nn.Module):
             emit_score = logits[i].view(batch_size, 1, n_tags)
             trans_score = self.trans_m.view(1, n_tags, n_tags)
             tmp = alpha.view(batch_size, n_tags, 1) + emit_score + trans_score
-            alpha = torch.logsumexp(tmp, 1).masked_fill(flip_mask[i].view(batch_size, 1), 0) + \
-                    alpha.masked_fill(mask[i].eq(1).view(batch_size, 1), 0)
+            alpha = torch.logsumexp(tmp, 1).masked_fill(
+                flip_mask[i].view(batch_size, 1), 0
+            ) + alpha.masked_fill(mask[i].eq(1).view(batch_size, 1), 0)
 
         if self.include_start_end_trans:
             alpha = alpha + self.end_scores.view(1, -1)
@@ -246,16 +277,24 @@ class ConditionalRandomField(nn.Module):
         # trans_socre [L-1, B]
         mask = mask.eq(1)
         flip_mask = mask.eq(0)
-        trans_score = self.trans_m[tags[:seq_len - 1], tags[1:]].masked_fill(flip_mask[1:, :], 0)
+        trans_score = self.trans_m[tags[: seq_len - 1], tags[1:]].masked_fill(
+            flip_mask[1:, :], 0
+        )
         # emit_score [L, B]
-        emit_score = logits[seq_idx.view(-1, 1), batch_idx.view(1, -1), tags].masked_fill(flip_mask, 0)
+        emit_score = logits[
+            seq_idx.view(-1, 1), batch_idx.view(1, -1), tags
+        ].masked_fill(flip_mask, 0)
         # score [L-1, B]
-        score = trans_score + emit_score[:seq_len - 1, :]
+        score = trans_score + emit_score[: seq_len - 1, :]
         score = score.sum(0) + emit_score[-1].masked_fill(flip_mask[-1], 0)
         if self.include_start_end_trans:
-            st_scores = self.start_scores.view(1, -1).repeat(batch_size, 1)[batch_idx, tags[0]]
+            st_scores = self.start_scores.view(1, -1).repeat(batch_size, 1)[
+                batch_idx, tags[0]
+            ]
             last_idx = mask.long().sum(0) - 1
-            ed_scores = self.end_scores.view(1, -1).repeat(batch_size, 1)[batch_idx, tags[last_idx, batch_idx]]
+            ed_scores = self.end_scores.view(1, -1).repeat(batch_size, 1)[
+                batch_idx, tags[last_idx, batch_idx]
+            ]
             score = score + st_scores + ed_scores
         # return [B,]
         return score
@@ -311,8 +350,9 @@ class ConditionalRandomField(nn.Module):
             score = prev_score + trans_score + cur_score
             best_score, best_dst = score.max(1)
             vpath[i] = best_dst
-            vscore = best_score.masked_fill(mask[i].eq(0).view(batch_size, 1), 0) + \
-                     vscore.masked_fill(mask[i].view(batch_size, 1), 0)
+            vscore = best_score.masked_fill(
+                mask[i].eq(0).view(batch_size, 1), 0
+            ) + vscore.masked_fill(mask[i].view(batch_size, 1), 0)
 
         if self.include_start_end_trans:
             vscore += transitions[:n_tags, n_tags + 1].view(1, -1)
@@ -320,7 +360,7 @@ class ConditionalRandomField(nn.Module):
         # backtrace
         batch_idx = torch.arange(batch_size, dtype=torch.long, device=logits.device)
         seq_idx = torch.arange(seq_len, dtype=torch.long, device=logits.device)
-        lens = (mask.long().sum(0) - 1)
+        lens = mask.long().sum(0) - 1
         # idxes [L, B], batched idx from seq_len-1 to 0
         idxes = (lens.view(1, -1) - seq_idx.view(-1, 1)) % seq_len
 
@@ -334,7 +374,7 @@ class ConditionalRandomField(nn.Module):
         if unpad:
             paths = []
             for idx, seq_len in enumerate(lens):
-                paths.append(ans[idx, :seq_len + 1].tolist())
+                paths.append(ans[idx, : seq_len + 1].tolist())
         else:
             paths = ans
         return paths, ans_score

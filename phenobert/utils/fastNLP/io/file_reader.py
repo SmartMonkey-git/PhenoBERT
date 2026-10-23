@@ -10,7 +10,7 @@ import csv
 from ..core import logger
 
 
-def _read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
+def _read_csv(path, encoding="utf-8", headers=None, sep=",", dropna=True):
     """
     Construct a generator to read csv items.
 
@@ -22,15 +22,16 @@ def _read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
             :if False, raise ValueError when reading invalid data. default: True
     :return: generator, every time yield (line number, csv item)
     """
-    with open(path, 'r', encoding=encoding) as csv_file:
+    with open(path, "r", encoding=encoding) as csv_file:
         f = csv.reader(csv_file, delimiter=sep)
         start_idx = 0
         if headers is None:
             headers = next(f)
             start_idx += 1
         elif not isinstance(headers, (list, tuple)):
-            raise TypeError("headers should be list or tuple, not {}." \
-                            .format(type(headers)))
+            raise TypeError(
+                "headers should be list or tuple, not {}.".format(type(headers))
+            )
         for line_idx, line in enumerate(f, start_idx):
             contents = line
             if len(contents) != len(headers):
@@ -38,19 +39,25 @@ def _read_csv(path, encoding='utf-8', headers=None, sep=',', dropna=True):
                     continue
                 else:
                     if "" in headers:
-                        raise ValueError(("Line {} has {} parts, while header has {} parts.\n" +
-                                          "Please check the empty parts or unnecessary '{}'s  in header.")
-                                         .format(line_idx, len(contents), len(headers), sep))
+                        raise ValueError(
+                            (
+                                "Line {} has {} parts, while header has {} parts.\n"
+                                + "Please check the empty parts or unnecessary '{}'s  in header."
+                            ).format(line_idx, len(contents), len(headers), sep)
+                        )
                     else:
-                        raise ValueError("Line {} has {} parts, while header has {} parts." \
-                                         .format(line_idx, len(contents), len(headers)))
+                        raise ValueError(
+                            "Line {} has {} parts, while header has {} parts.".format(
+                                line_idx, len(contents), len(headers)
+                            )
+                        )
             _dict = {}
             for header, content in zip(headers, contents):
                 _dict[header] = content
             yield line_idx, _dict
 
 
-def _read_json(path, encoding='utf-8', fields=None, dropna=True):
+def _read_json(path, encoding="utf-8", fields=None, dropna=True):
     """
     Construct a generator to read json items.
 
@@ -63,7 +70,7 @@ def _read_json(path, encoding='utf-8', fields=None, dropna=True):
     """
     if fields:
         fields = set(fields)
-    with open(path, 'r', encoding=encoding) as f:
+    with open(path, "r", encoding=encoding) as f:
         for line_idx, line in enumerate(f):
             data = json.loads(line)
             if fields is None:
@@ -77,11 +84,11 @@ def _read_json(path, encoding='utf-8', fields=None, dropna=True):
                 if dropna:
                     continue
                 else:
-                    raise ValueError('invalid instance at line: {}'.format(line_idx))
+                    raise ValueError("invalid instance at line: {}".format(line_idx))
             yield line_idx, _res
 
 
-def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
+def _read_conll(path, encoding="utf-8", indexes=None, dropna=True):
     """
     Construct a generator to read conll items.
 
@@ -98,17 +105,17 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
         sample = [sample[i] for i in indexes]
         for f in sample:
             if len(f) <= 0:
-                raise ValueError('empty field')
+                raise ValueError("empty field")
         return sample
 
-    with open(path, 'r', encoding=encoding) as f:
+    with open(path, "r", encoding=encoding) as f:
         sample = []
         start = next(f).strip()
-        if start != '':
+        if start != "":
             sample.append(start.split())
         for line_idx, line in enumerate(f, 1):
             line = line.strip()
-            if line == '':
+            if line == "":
                 if len(sample):
                     try:
                         res = parse_conll(sample)
@@ -116,10 +123,16 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
                         yield line_idx, res
                     except Exception as e:
                         if dropna:
-                            logger.warning('Invalid instance which ends at line: {} has been dropped.'.format(line_idx))
+                            logger.warning(
+                                "Invalid instance which ends at line: {} has been dropped.".format(
+                                    line_idx
+                                )
+                            )
                             continue
-                        raise ValueError('Invalid instance which ends at line: {}'.format(line_idx))
-            elif line.startswith('#'):
+                        raise ValueError(
+                            "Invalid instance which ends at line: {}".format(line_idx)
+                        )
+            elif line.startswith("#"):
                 continue
             else:
                 sample.append(line.split())
@@ -130,5 +143,5 @@ def _read_conll(path, encoding='utf-8', indexes=None, dropna=True):
             except Exception as e:
                 if dropna:
                     return
-                logger.error('invalid instance ends at line: {}'.format(line_idx))
+                logger.error("invalid instance ends at line: {}".format(line_idx))
                 raise e

@@ -1,8 +1,9 @@
 #! /home/fyh/anaconda3/envs/NERpy3/bin/python
 import random
 import nltk
-from util import HPOTree,HPO_class,getNames, containNum
-obo_file_path="../data/hpo.json"
+from util import HPOTree, HPO_class, getNames, containNum
+
+obo_file_path = "../data/hpo.json"
 
 # wiki_file_path="../models/wikipedia.txt"
 # none_list=[]
@@ -15,16 +16,16 @@ obo_file_path="../data/hpo.json"
 #     for sub_index in indexes:
 #         none_list.append(" ".join(tokens[sub_index:sub_index+random.randint(1,10)]))
 
-hpo_tree=HPOTree()
+hpo_tree = HPOTree()
 # p_phrase 2 HPO
-p_phrase2HPO=hpo_tree.p_phrase2HPO
+p_phrase2HPO = hpo_tree.p_phrase2HPO
 # HPO:[name+synonym]
-HPO2phrase={}
-data=hpo_tree.data
+HPO2phrase = {}
+data = hpo_tree.data
 for hpo_name in data:
-    struct=HPO_class(data[hpo_name])
-    names=getNames(struct)
-    HPO2phrase[hpo_name]=names
+    struct = HPO_class(data[hpo_name])
+    names = getNames(struct)
+    HPO2phrase[hpo_name] = names
 
 total_neg_lst = []
 part_pos_lst = []
@@ -66,8 +67,12 @@ for true_hpo_name in HPO2phrase.keys():
 
     # 加入了祖先
     part_pos_lst.extend(
-        [random.choice(HPO2phrase[true_hpo_name]) + "::" + item + "\t1\n" for item in sub_fa_phrases_set if
-         not containNum(item)])
+        [
+            random.choice(HPO2phrase[true_hpo_name]) + "::" + item + "\t1\n"
+            for item in sub_fa_phrases_set
+            if not containNum(item)
+        ]
+    )
 
     # 子代关系
     tmp = []
@@ -77,20 +82,27 @@ for true_hpo_name in HPO2phrase.keys():
         tmp = random.sample(tmp, 10)
     sub_neg_phrases.extend(tmp)
 
-
     # 不相关的病种
     tmp = []
     Candidate_hpo_set2 = random.sample(HPO2phrase.keys(), 5)
     for item in Candidate_hpo_set2:
-        if item in Candidate_hpo_set_son_set or item in Candidate_hpo_set_f_set or item == true_hpo_name:
+        if (
+            item in Candidate_hpo_set_son_set
+            or item in Candidate_hpo_set_f_set
+            or item == true_hpo_name
+        ):
             continue
         tmp.extend(HPO2phrase[item])
     if len(tmp) > 5:
         tmp = random.sample(tmp, 5)
     sub_neg_phrases.extend(tmp)
     total_neg_lst.extend(
-        [random.choice(HPO2phrase[true_hpo_name]) + "::" + item + "\t0\n" for item in sub_neg_phrases if
-         not containNum(item)])
+        [
+            random.choice(HPO2phrase[true_hpo_name]) + "::" + item + "\t0\n"
+            for item in sub_neg_phrases
+            if not containNum(item)
+        ]
+    )
 
     sub_neg_phrases = []
 
@@ -107,28 +119,31 @@ for true_hpo_name in HPO2phrase.keys():
             sub_neg_phrases.append(word)
 
     total_neg_lst.extend(
-        [item + "::" + random.choice(HPO2phrase[true_hpo_name]) + "\t0\n" for item in sub_neg_phrases if
-         not containNum(item)])
-
+        [
+            item + "::" + random.choice(HPO2phrase[true_hpo_name]) + "\t0\n"
+            for item in sub_neg_phrases
+            if not containNum(item)
+        ]
+    )
 
 
 # this part produce train file for bert
-write_file=open("../models/all4bert_new_triple_2.txt","w")
+write_file = open("../models/all4bert_new_triple_2.txt", "w")
 
 # get part neg list
-pos_lst=[]
+pos_lst = []
 for hpo_name in HPO2phrase:
-    names=HPO2phrase[hpo_name]
-    if len(names)<=1:
+    names = HPO2phrase[hpo_name]
+    if len(names) <= 1:
         continue
-    tmp_lst=[]
+    tmp_lst = []
     for index1 in range(len(names)):
         for index2 in range(len(names)):
-            if index1==index2:
+            if index1 == index2:
                 continue
             # 表示语义完全相关
             if not containNum(names[index1]) and not containNum(names[index2]):
-                tmp_lst.append(names[index1]+"::"+names[index2]+"\t2\n")
+                tmp_lst.append(names[index1] + "::" + names[index2] + "\t2\n")
     pos_lst.extend(tmp_lst)
 
 # 78968
@@ -142,5 +157,3 @@ total_neg_lst.extend(part_pos_lst)
 random.shuffle(total_neg_lst)
 write_file.write("".join(total_neg_lst))
 write_file.close()
-
-

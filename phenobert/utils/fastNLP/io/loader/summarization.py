@@ -1,8 +1,6 @@
 """undocumented"""
 
-__all__ = [
-    "ExtCNNDMLoader"
-]
+__all__ = ["ExtCNNDMLoader"]
 
 import os
 from typing import Union, Dict
@@ -26,7 +24,12 @@ class ExtCNNDMLoader(JsonLoader):
     """
 
     def __init__(self, fields=None):
-        fields = fields or {"text": None, "summary": None, "label": None, "publication": None}
+        fields = fields or {
+            "text": None,
+            "summary": None,
+            "label": None,
+            "publication": None,
+        }
         super(ExtCNNDMLoader, self).__init__(fields=fields)
 
     def load(self, paths: Union[str, Dict[str, str]] = None):
@@ -44,9 +47,9 @@ class ExtCNNDMLoader(JsonLoader):
         if paths is None:
             paths = self.download()
         paths = check_loader_paths(paths)
-        if ('train' in paths) and ('test' not in paths):
-            paths['test'] = paths['train']
-            paths.pop('train')
+        if ("train" in paths) and ("test" not in paths):
+            paths["test"] = paths["train"]
+            paths.pop("train")
 
         datasets = {name: self._load(path) for name, path in paths.items()}
         data_bundle = DataBundle(datasets=datasets)
@@ -59,5 +62,5 @@ class ExtCNNDMLoader(JsonLoader):
         https://arxiv.org/pdf/1506.03340.pdf
         :return:
         """
-        output_dir = self._get_dataset_path('ext-cnndm')
+        output_dir = self._get_dataset_path("ext-cnndm")
         return output_dir

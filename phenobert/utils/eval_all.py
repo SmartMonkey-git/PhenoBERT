@@ -1,60 +1,58 @@
 import os
 from util import HPOTree
 
-dataset="GSC+"
+dataset = "GSC+"
 
-test_corpus_dir_path="../data/"+dataset+"/corpus"
-gold_dir_path="../data/"+dataset+"/ann"
-method1_dir_path="../evaluate/NCBO/predict_"+dataset
-method2_dir_path="../evaluate/NCR/predict_"+dataset
-method3_dir_path="../evaluate/Clinphen/predict_"+dataset
-method4_dir_path="../evaluate/MetaMapLite/predict_"+dataset
-method5_dir_path="../evaluate/Doc2hpo/predict_"+dataset
-method6_dir_path="../evaluate/Ours/predict_"+dataset
-method7_dir_path="../evaluate/PhenoTagger/predict_"+dataset
+test_corpus_dir_path = "../data/" + dataset + "/corpus"
+gold_dir_path = "../data/" + dataset + "/ann"
+method1_dir_path = "../evaluate/NCBO/predict_" + dataset
+method2_dir_path = "../evaluate/NCR/predict_" + dataset
+method3_dir_path = "../evaluate/Clinphen/predict_" + dataset
+method4_dir_path = "../evaluate/MetaMapLite/predict_" + dataset
+method5_dir_path = "../evaluate/Doc2hpo/predict_" + dataset
+method6_dir_path = "../evaluate/Ours/predict_" + dataset
+method7_dir_path = "../evaluate/PhenoTagger/predict_" + dataset
 
 hpo_tree = HPOTree()
 hpo_tree.buildHPOTree()
-filelist=os.listdir(test_corpus_dir_path)
-alt_id_dict=hpo_tree.alt_id_dict
+filelist = os.listdir(test_corpus_dir_path)
+alt_id_dict = hpo_tree.alt_id_dict
 
 # Micro Way
-norm1,denorm_pr1,denorm_re1=0,0,0
-norm2,denorm_pr2,denorm_re2=0,0,0
-norm3,denorm_pr3,denorm_re3=0,0,0
-norm4,denorm_pr4,denorm_re4=0,0,0
-norm5,denorm_pr5,denorm_re5=0,0,0
-norm6,denorm_pr6,denorm_re6=0,0,0
-norm7,denorm_pr7,denorm_re7=0,0,0
-
+norm1, denorm_pr1, denorm_re1 = 0, 0, 0
+norm2, denorm_pr2, denorm_re2 = 0, 0, 0
+norm3, denorm_pr3, denorm_re3 = 0, 0, 0
+norm4, denorm_pr4, denorm_re4 = 0, 0, 0
+norm5, denorm_pr5, denorm_re5 = 0, 0, 0
+norm6, denorm_pr6, denorm_re6 = 0, 0, 0
+norm7, denorm_pr7, denorm_re7 = 0, 0, 0
 
 
 # Macro Way
-macro_re1=0
-macro_pr1=0
-macro_re2=0
-macro_pr2=0
-macro_re3=0
-macro_pr3=0
-macro_re4=0
-macro_pr4=0
-macro_re5=0
-macro_pr5=0
-macro_re6=0
-macro_pr6=0
-macro_re7=0
-macro_pr7=0
-
+macro_re1 = 0
+macro_pr1 = 0
+macro_re2 = 0
+macro_pr2 = 0
+macro_re3 = 0
+macro_pr3 = 0
+macro_re4 = 0
+macro_pr4 = 0
+macro_re5 = 0
+macro_pr5 = 0
+macro_re6 = 0
+macro_pr6 = 0
+macro_re7 = 0
+macro_pr7 = 0
 
 
 # Extended Way
-extend_s1=0
-extend_s2=0
-extend_s3=0
-extend_s4=0
-extend_s5=0
-extend_s6=0
-extend_s7=0
+extend_s1 = 0
+extend_s2 = 0
+extend_s3 = 0
+extend_s4 = 0
+extend_s5 = 0
+extend_s6 = 0
+extend_s7 = 0
 
 
 def calc_metric(true_hpos, method_hpos):
@@ -73,18 +71,15 @@ def calc_metric(true_hpos, method_hpos):
     return pr, re, f1
 
 
-
-
 for file_name in filelist:
-    true_path=os.path.join(gold_dir_path,file_name)
-    method1_path=os.path.join(method1_dir_path,file_name)
-    method2_path=os.path.join(method2_dir_path,file_name)
-    method3_path=os.path.join(method3_dir_path,file_name)
-    method4_path=os.path.join(method4_dir_path,file_name)
-    method5_path=os.path.join(method5_dir_path,file_name)
-    method6_path=os.path.join(method6_dir_path,file_name)
-    method7_path=os.path.join(method7_dir_path,file_name)
-
+    true_path = os.path.join(gold_dir_path, file_name)
+    method1_path = os.path.join(method1_dir_path, file_name)
+    method2_path = os.path.join(method2_dir_path, file_name)
+    method3_path = os.path.join(method3_dir_path, file_name)
+    method4_path = os.path.join(method4_dir_path, file_name)
+    method5_path = os.path.join(method5_dir_path, file_name)
+    method6_path = os.path.join(method6_dir_path, file_name)
+    method7_path = os.path.join(method7_dir_path, file_name)
 
     # ann
     true_hpos = set()
@@ -124,8 +119,6 @@ for file_name in filelist:
     macro_pr1 += pr1
     s1 = hpo_tree.getHPO_set_similarity_max(method1_hpos, true_hpos)
     extend_s1 += s1
-
-
 
     # NCR
     method2_hpos = set()
@@ -183,7 +176,6 @@ for file_name in filelist:
     s4 = hpo_tree.getHPO_set_similarity_max(method4_hpos, true_hpos)
     extend_s4 += s4
 
-
     # Doc2hpo
     method5_hpos = set()
     with open(method5_path) as method5_file:
@@ -201,8 +193,6 @@ for file_name in filelist:
     macro_pr5 += pr5
     s5 = hpo_tree.getHPO_set_similarity_max(method5_hpos, true_hpos)
     extend_s5 += s5
-
-
 
     # PhenoBERT
     method6_hpos = set()
@@ -247,7 +237,6 @@ for file_name in filelist:
     s7 = hpo_tree.getHPO_set_similarity_max(method7_hpos, true_hpos)
     extend_s7 += s7
 
-
     # print(file_name + "\tPrecision\tRecall\tF1 score")
     # print("NCBO\t%.4f\t%.4f\t%.4f\t%.4f" % (pr1, re1, f11, s1))
     # print("NCR\t%.4f\t%.4f\t%.4f\t%.4f" % (pr2, re2, f12, s2))
@@ -258,64 +247,106 @@ for file_name in filelist:
 
 
 print("Evaluate in Micro Way")
-pr1=norm1/denorm_pr1
-re1=norm1/denorm_re1
-print("NCBO Precision: %.4f\tRecal: %.4f\tF1 score: %.4f" % (pr1,re1,2*pr1*re1/(pr1+re1)))
-pr2=norm2/denorm_pr2
-re2=norm2/denorm_re2
-print("NCR Precision: %.4f\tRecal: %.4f\tF1 score: %.4f" % (pr2,re2,2*pr2*re2/(pr2+re2)))
-pr3=norm3/denorm_pr3
-re3=norm3/denorm_re3
-print("Clinphen Precision: %.4f\tRecal: %.4f\tF1 score: %.4f" % (pr3,re3,2*pr3*re3/(pr3+re3)))
-pr4=norm4/denorm_pr4
-re4=norm4/denorm_re4
-print("MetaMap Precision: %.4f\tRecal: %.4f\tF1 score: %.4f" % (pr4,re4,2*pr4*re4/(pr4+re4)))
-pr5=norm5/denorm_pr5
-re5=norm5/denorm_re5
-print("Doc2hpo Precision: %.4f\tRecal: %.4f\tF1 score: %.4f" % (pr5,re5,2*pr5*re5/(pr5+re5)))
-pr6=norm6/denorm_pr6
-re6=norm6/denorm_re6
-print("PhenoBERT Precision: %.4f\tRecal: %.4f\tF1 score: %.4f" % (pr6,re6,2*pr6*re6/(pr6+re6)))
-pr7=norm7/denorm_pr7
-re7=norm7/denorm_re7
-print("PhenoTagger Precision: %.4f\tRecal: %.4f\tF1 score: %.4f" % (pr7,re7,2*pr7*re7/(pr7+re7)))
+pr1 = norm1 / denorm_pr1
+re1 = norm1 / denorm_re1
+print(
+    "NCBO Precision: %.4f\tRecal: %.4f\tF1 score: %.4f"
+    % (pr1, re1, 2 * pr1 * re1 / (pr1 + re1))
+)
+pr2 = norm2 / denorm_pr2
+re2 = norm2 / denorm_re2
+print(
+    "NCR Precision: %.4f\tRecal: %.4f\tF1 score: %.4f"
+    % (pr2, re2, 2 * pr2 * re2 / (pr2 + re2))
+)
+pr3 = norm3 / denorm_pr3
+re3 = norm3 / denorm_re3
+print(
+    "Clinphen Precision: %.4f\tRecal: %.4f\tF1 score: %.4f"
+    % (pr3, re3, 2 * pr3 * re3 / (pr3 + re3))
+)
+pr4 = norm4 / denorm_pr4
+re4 = norm4 / denorm_re4
+print(
+    "MetaMap Precision: %.4f\tRecal: %.4f\tF1 score: %.4f"
+    % (pr4, re4, 2 * pr4 * re4 / (pr4 + re4))
+)
+pr5 = norm5 / denorm_pr5
+re5 = norm5 / denorm_re5
+print(
+    "Doc2hpo Precision: %.4f\tRecal: %.4f\tF1 score: %.4f"
+    % (pr5, re5, 2 * pr5 * re5 / (pr5 + re5))
+)
+pr6 = norm6 / denorm_pr6
+re6 = norm6 / denorm_re6
+print(
+    "PhenoBERT Precision: %.4f\tRecal: %.4f\tF1 score: %.4f"
+    % (pr6, re6, 2 * pr6 * re6 / (pr6 + re6))
+)
+pr7 = norm7 / denorm_pr7
+re7 = norm7 / denorm_re7
+print(
+    "PhenoTagger Precision: %.4f\tRecal: %.4f\tF1 score: %.4f"
+    % (pr7, re7, 2 * pr7 * re7 / (pr7 + re7))
+)
 
 print("\nEvaluate in Macro Way")
-pr1=macro_pr1/len(filelist)
-re1=macro_re1/len(filelist)
-print("NCBO Precision: %.4f\tRecal: %.4f\tF1 score: %.4f" % (pr1,re1,2*pr1*re1/(pr1+re1)))
-pr2=macro_pr2/len(filelist)
-re2=macro_re2/len(filelist)
-print("NCR Precision: %.4f\tRecal: %.4f\tF1 score: %.4f" % (pr2,re2,2*pr2*re2/(pr2+re2)))
-pr3=macro_pr3/len(filelist)
-re3=macro_re3/len(filelist)
-print("Clinphen Precision: %.4f\tRecal: %.4f\tF1 score: %.4f" % (pr3,re3,2*pr3*re3/(pr3+re3)))
-pr4=macro_pr4/len(filelist)
-re4=macro_re4/len(filelist)
-print("MetaMap Precision: %.4f\tRecal: %.4f\tF1 score: %.4f" % (pr4,re4,2*pr4*re4/(pr4+re4)))
-pr5=macro_pr5/len(filelist)
-re5=macro_re5/len(filelist)
-print("Doc2hpo Precision: %.4f\tRecal: %.4f\tF1 score: %.4f" % (pr5,re5,2*pr5*re5/(pr5+re5)))
-pr6=macro_pr6/len(filelist)
-re6=macro_re6/len(filelist)
-print("PhenoBERT Precision: %.4f\tRecal: %.4f\tF1 score: %.4f" % (pr6,re6,2*pr6*re6/(pr6+re6)))
-pr7=macro_pr7/len(filelist)
-re7=macro_re7/len(filelist)
-print("PhenoTagger Precision: %.4f\tRecal: %.4f\tF1 score: %.4f" % (pr7,re7,2*pr7*re7/(pr7+re7)))
+pr1 = macro_pr1 / len(filelist)
+re1 = macro_re1 / len(filelist)
+print(
+    "NCBO Precision: %.4f\tRecal: %.4f\tF1 score: %.4f"
+    % (pr1, re1, 2 * pr1 * re1 / (pr1 + re1))
+)
+pr2 = macro_pr2 / len(filelist)
+re2 = macro_re2 / len(filelist)
+print(
+    "NCR Precision: %.4f\tRecal: %.4f\tF1 score: %.4f"
+    % (pr2, re2, 2 * pr2 * re2 / (pr2 + re2))
+)
+pr3 = macro_pr3 / len(filelist)
+re3 = macro_re3 / len(filelist)
+print(
+    "Clinphen Precision: %.4f\tRecal: %.4f\tF1 score: %.4f"
+    % (pr3, re3, 2 * pr3 * re3 / (pr3 + re3))
+)
+pr4 = macro_pr4 / len(filelist)
+re4 = macro_re4 / len(filelist)
+print(
+    "MetaMap Precision: %.4f\tRecal: %.4f\tF1 score: %.4f"
+    % (pr4, re4, 2 * pr4 * re4 / (pr4 + re4))
+)
+pr5 = macro_pr5 / len(filelist)
+re5 = macro_re5 / len(filelist)
+print(
+    "Doc2hpo Precision: %.4f\tRecal: %.4f\tF1 score: %.4f"
+    % (pr5, re5, 2 * pr5 * re5 / (pr5 + re5))
+)
+pr6 = macro_pr6 / len(filelist)
+re6 = macro_re6 / len(filelist)
+print(
+    "PhenoBERT Precision: %.4f\tRecal: %.4f\tF1 score: %.4f"
+    % (pr6, re6, 2 * pr6 * re6 / (pr6 + re6))
+)
+pr7 = macro_pr7 / len(filelist)
+re7 = macro_re7 / len(filelist)
+print(
+    "PhenoTagger Precision: %.4f\tRecal: %.4f\tF1 score: %.4f"
+    % (pr7, re7, 2 * pr7 * re7 / (pr7 + re7))
+)
 
 
 print("\nEvaluate in Node Similarity Way")
-s1=extend_s1/len(filelist)
+s1 = extend_s1 / len(filelist)
 print("NCBO Similarity: %.4f" % s1)
-s2=extend_s2/len(filelist)
+s2 = extend_s2 / len(filelist)
 print("NCR Similarity: %.4f" % s2)
-s3=extend_s3/len(filelist)
+s3 = extend_s3 / len(filelist)
 print("Clinphen Similarity: %.4f" % s3)
-s4=extend_s4/len(filelist)
+s4 = extend_s4 / len(filelist)
 print("MetaMap Similarity: %.4f" % s4)
-s5=extend_s5/len(filelist)
+s5 = extend_s5 / len(filelist)
 print("Doc2hpo Similarity: %.4f" % s5)
-s6=extend_s6/len(filelist)
+s6 = extend_s6 / len(filelist)
 print("PhenoBERT Similarity: %.4f" % s6)
-s7=extend_s7/len(filelist)
+s7 = extend_s7 / len(filelist)
 print("PhenoTagger Similarity: %.4f" % s7)

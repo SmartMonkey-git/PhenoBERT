@@ -7,11 +7,10 @@ Pipe用于处理通过 Loader 读取的数据，所有的 Pipe 都包含 ``proce
 `data_bundle` 还会包含将field转为index时所建立的词表。
 
 """
+
 __all__ = [
     "Pipe",
-    
     "CWSPipe",
-    
     "YelpFullPipe",
     "YelpPolarityPipe",
     "SSTPipe",
@@ -20,14 +19,12 @@ __all__ = [
     "ChnSentiCorpPipe",
     "THUCNewsPipe",
     "WeiboSenti100kPipe",
-    
     "Conll2003NERPipe",
     "OntoNotesNERPipe",
     "MsraNERPipe",
     "WeiboNERPipe",
     "PeopleDailyPipe",
     "Conll2003Pipe",
-    
     "MatchingBertPipe",
     "RTEBertPipe",
     "SNLIBertPipe",
@@ -49,20 +46,52 @@ __all__ = [
     "RenamePipe",
     "GranularizePipe",
     "MachingTruncatePipe",
-    
     "CoReferencePipe",
-
-    "CMRC2018BertPipe"
+    "CMRC2018BertPipe",
 ]
 
-from .classification import YelpFullPipe, YelpPolarityPipe, SSTPipe, SST2Pipe, IMDBPipe, ChnSentiCorpPipe, THUCNewsPipe, \
-    WeiboSenti100kPipe
-from .conll import Conll2003NERPipe, OntoNotesNERPipe, MsraNERPipe, WeiboNERPipe, PeopleDailyPipe
+from .classification import (
+    YelpFullPipe,
+    YelpPolarityPipe,
+    SSTPipe,
+    SST2Pipe,
+    IMDBPipe,
+    ChnSentiCorpPipe,
+    THUCNewsPipe,
+    WeiboSenti100kPipe,
+)
+from .conll import (
+    Conll2003NERPipe,
+    OntoNotesNERPipe,
+    MsraNERPipe,
+    WeiboNERPipe,
+    PeopleDailyPipe,
+)
 from .conll import Conll2003Pipe
 from .coreference import CoReferencePipe
 from .cws import CWSPipe
-from .matching import MatchingBertPipe, RTEBertPipe, SNLIBertPipe, QuoraBertPipe, QNLIBertPipe, MNLIBertPipe, \
-    MatchingPipe, RTEPipe, SNLIPipe, QuoraPipe, QNLIPipe, MNLIPipe, CNXNLIBertPipe, CNXNLIPipe, BQCorpusBertPipe, \
-    LCQMCPipe, BQCorpusPipe, LCQMCBertPipe, RenamePipe, GranularizePipe, MachingTruncatePipe
+from .matching import (
+    MatchingBertPipe,
+    RTEBertPipe,
+    SNLIBertPipe,
+    QuoraBertPipe,
+    QNLIBertPipe,
+    MNLIBertPipe,
+    MatchingPipe,
+    RTEPipe,
+    SNLIPipe,
+    QuoraPipe,
+    QNLIPipe,
+    MNLIPipe,
+    CNXNLIBertPipe,
+    CNXNLIPipe,
+    BQCorpusBertPipe,
+    LCQMCPipe,
+    BQCorpusPipe,
+    LCQMCBertPipe,
+    RenamePipe,
+    GranularizePipe,
+    MachingTruncatePipe,
+)
 from .pipe import Pipe
 from .qa import CMRC2018BertPipe

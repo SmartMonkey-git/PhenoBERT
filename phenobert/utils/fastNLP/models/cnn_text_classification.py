@@ -3,9 +3,7 @@
     doc
 """
 
-__all__ = [
-    "CNNText"
-]
+__all__ = ["CNNText"]
 
 import torch
 import torch.nn as nn
@@ -20,16 +18,19 @@ class CNNText(torch.nn.Module):
     """
     使用CNN进行文本分类的模型
     'Yoon Kim. 2014. Convolution Neural Networks for Sentence Classification.'
-    
+
     """
 
-    def __init__(self, embed,
-                 num_classes,
-                 kernel_nums=(30, 40, 50),
-                 kernel_sizes=(1, 3, 5),
-                 dropout=0.5):
+    def __init__(
+        self,
+        embed,
+        num_classes,
+        kernel_nums=(30, 40, 50),
+        kernel_sizes=(1, 3, 5),
+        dropout=0.5,
+    ):
         """
-        
+
         :param tuple(int,int),torch.FloatTensor,nn.Embedding,numpy.ndarray embed: Embedding的大小(传入tuple(int, int),
             第一个int为vocab_zie, 第二个int为embed_dim); 如果为Tensor, Embedding, ndarray等则直接使用该值初始化Embedding
         :param int num_classes: 一共有多少类
@@ -44,7 +45,8 @@ class CNNText(torch.nn.Module):
         self.conv_pool = encoder.ConvMaxpool(
             in_channels=self.embed.embedding_dim,
             out_channels=kernel_nums,
-            kernel_sizes=kernel_sizes)
+            kernel_sizes=kernel_sizes,
+        )
         self.dropout = nn.Dropout(dropout)
         self.fc = nn.Linear(sum(kernel_nums), num_classes)
 
